@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PTM Exclusive Accommodation quotation calculator" />
+  <title>PTM Exclusive | Quote Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: { 50: '#f3f6f8', 100: '#e2ebf0', 500: '#355673', 600: '#284a68', 700: '#183650', 800: '#102b43', 900: '#091e31' },
+            warm: { 50: '#fafaf8', 100: '#f4f4f0', 200: '#e9e9e3' }
+          },
+          boxShadow: { soft: '0 14px 38px rgba(16, 43, 67, 0.08)', paper: '0 18px 44px rgba(16, 43, 67, 0.12)' }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+    input[type="checkbox"] { accent-color: #173858; }
+    .field-error { display: none; }
+    .has-error .field-error { display: block; }
+    .has-error input, .has-error select { border-color: #dc2626; }
+    #guestError { display: none !important; }
+    #guestField.has-error:not(.guest-touched) .field-error { display: none; }
+    #guestField.has-error:not(.guest-touched) input { border-color: #cbd5e1; }
+    #quotePreview [hidden] { display: none !important; }
+    #previewGuest:not([data-has-guest="true"]) { display: none; }
+    #quotePreview p:has(+ #previewGuest:not([data-has-guest="true"])) { display: none; }
+    .toggle-panel[hidden], .conditional-field[hidden] { display: none; }
+    .money-prefix { pointer-events: none; }
+    .document-rule { height: 1px; background: linear-gradient(90deg, #d9e3ea, transparent); }
+    #quotePreview .document-rule + div > p { display: none; }
+    .quote-workspace > aside > .no-print {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.9rem;
+      background: #ffffff;
+      padding: 0.75rem;
+      box-shadow: 0 10px 26px rgba(16, 43, 67, 0.06);
+    }
+
+    @media (min-width: 1024px) {
+      .quote-workspace > aside { display: contents; }
+      .quote-workspace > aside > .no-print {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      }
+    }
+
+    @media print {
+      @page { size: A4; margin: 14mm; }
+      body { background: #fff !important; }
+      body * { visibility: hidden !important; }
+      #quotePreview, #quotePreview * { visibility: visible !important; }
+      #quotePreview {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+      }
+      #quotePreview .print-only-rule { display: block !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-warm-100 font-sans text-slate-800 antialiased">
+  <header class="no-print border-b border-white/10 bg-navy-900 text-white">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/10 ring-1 ring-white/15"><i data-lucide="building-2" class="h-[18px] w-[18px]" aria-hidden="true"></i></div>
+        <div class="min-w-0"><p class="text-sm font-bold tracking-[0.16em]">PTM EXCLUSIVE</p><p class="mt-0.5 text-xs text-slate-300">Quote Engine</p></div>
+      </div>
+      <div class="hidden text-right sm:block"><p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Quote reference</p><p id="headerReference" class="mt-0.5 font-mono text-xs font-bold text-slate-100"></p></div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <div class="quote-workspace grid items-start gap-6 lg:grid-cols-[minmax(0,.82fr)_minmax(450px,1.18fr)] lg:gap-8">
+      <section class="no-print rounded-2xl border border-slate-200 bg-white p-4 shadow-soft sm:p-6" aria-labelledby="quote-inputs-title">
+        <div class="mb-5 border-b border-slate-100 pb-5"><h2 id="quote-inputs-title" class="text-lg font-bold text-navy-900">Quote Inputs</h2><p class="mt-1 text-sm text-slate-500">Enter the stay details for the quotation.</p></div>
+        <form id="quoteForm" novalidate class="space-y-4">
+          <fieldset class="rounded-xl border border-slate-200 bg-warm-50 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Guest</legend><div id="guestField" class="has-error"><label for="guestName" class="mb-1.5 block text-sm font-semibold text-slate-700">Guest name <span class="text-red-600">*</span></label><input id="guestName" name="guestName" type="text" autocomplete="name" required placeholder="e.g. Paul Muponda" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition placeholder:text-slate-400 focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="guestError" /><p id="guestError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter the guest's name.</p></div></fieldset>
+
+          <fieldset class="rounded-xl border border-slate-200 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Stay</legend><div class="grid gap-3 sm:grid-cols-2"><div id="checkInField"><label for="checkIn" class="mb-1.5 block text-sm font-semibold text-slate-700">Check-in <span class="text-red-600">*</span></label><input id="checkIn" name="checkIn" type="date" required class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="checkInError dateError" /><p id="checkInError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Choose a valid check-in date.</p></div><div id="checkOutField"><label for="checkOut" class="mb-1.5 block text-sm font-semibold text-slate-700">Check-out <span class="text-red-600">*</span></label><input id="checkOut" name="checkOut" type="date" required class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="checkOutError dateError" /><p id="checkOutError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Choose a valid check-out date.</p></div></div><p id="dateError" class="mt-2 hidden text-sm font-medium text-red-600" role="alert">Check-out must be later than check-in.</p><div class="mt-4 flex items-center justify-between rounded-lg bg-navy-50 px-3.5 py-2.5"><span class="text-xs font-semibold uppercase tracking-wide text-navy-600">Duration</span><p id="durationHint" class="text-sm font-bold text-navy-800" aria-live="polite"></p></div></fieldset>
+
+          <fieldset class="rounded-xl border border-slate-200 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Pricing</legend><div id="rateField"><label for="nightlyRate" class="mb-1.5 block text-sm font-semibold text-slate-700">Nightly rate <span class="text-red-600">*</span></label><div class="relative"><span class="money-prefix absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-semibold text-slate-500 currency-symbol">$</span><input id="nightlyRate" name="nightlyRate" type="number" min="0" step="0.01" inputmode="decimal" required class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white py-3 pl-8 pr-3.5 text-lg font-semibold text-navy-900 outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="rateError" /></div><p id="rateError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter a nightly rate of $0 or more.</p></div><div class="mt-4"><label for="discountType" class="mb-1.5 block text-sm font-semibold text-slate-700">Discount</label><select id="discountType" name="discountType" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100"><option value="automatic">Length of Stay — Automatic</option><option value="none">No Discount</option><option value="percentage">Custom Percentage</option><option value="flat">Custom Flat Discount</option></select></div><div id="automaticDiscountStatus" class="mt-3 flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800" hidden><i data-lucide="badge-check" class="h-4 w-4 shrink-0" aria-hidden="true"></i><span id="automaticDiscountText" class="font-semibold"></span></div><div id="percentagePanel" class="conditional-field mt-4" hidden><div id="percentageField"><label for="discountPercentage" class="mb-1.5 block text-sm font-semibold text-slate-700">Discount percentage (%)</label><input id="discountPercentage" name="discountPercentage" type="number" min="0" max="100" step="0.01" inputmode="decimal" class="block min-h-12 w-full rounded-lg border border-slate-300 px-3.5 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="percentageError" /><p id="percentageError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter a percentage between 0 and 100.</p></div></div><div id="flatPanel" class="conditional-field mt-4" hidden><div id="flatField"><label for="discountFlat" class="mb-1.5 block text-sm font-semibold text-slate-700">Discount amount (<span class="currency-symbol">$</span>)</label><input id="discountFlat" name="discountFlat" type="number" min="0" step="0.01" inputmode="decimal" class="block min-h-12 w-full rounded-lg border border-slate-300 px-3.5 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="flatError" /><p id="flatError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter a discount from $0 up to the accommodation subtotal.</p></div></div></fieldset>
+
+          <fieldset class="rounded-xl border border-slate-200 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Optional charges</legend><div class="space-y-2.5"><div class="rounded-lg border border-slate-200 bg-warm-50 px-3.5 py-3"><label class="flex cursor-pointer items-center justify-between gap-4" for="cleaningEnabled"><span class="flex items-center gap-2.5"><span class="grid h-7 w-7 place-items-center rounded-md bg-white text-navy-700 ring-1 ring-slate-200"><i data-lucide="sparkles" class="h-3.5 w-3.5" aria-hidden="true"></i></span><span><span class="block text-sm font-semibold text-slate-700">Add cleaning fee</span><span class="block text-xs text-slate-500">Included in accommodation total</span></span></span><input id="cleaningEnabled" name="cleaningEnabled" type="checkbox" class="h-5 w-5 shrink-0 rounded border-slate-300" aria-controls="cleaningPanel" /></label><div id="cleaningPanel" class="toggle-panel mt-3 border-t border-slate-200 pt-3" hidden><div id="cleaningField"><label for="cleaningFee" class="mb-1.5 block text-sm font-semibold text-slate-700">Cleaning fee (<span class="currency-symbol">$</span>)</label><input id="cleaningFee" name="cleaningFee" type="number" min="0" step="0.01" inputmode="decimal" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="cleaningError" /><p id="cleaningError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter a cleaning fee of $0 or more.</p></div></div></div><div class="rounded-lg border border-slate-200 bg-warm-50 px-3.5 py-3"><label class="flex cursor-pointer items-center justify-between gap-4" for="depositEnabled"><span class="flex items-center gap-2.5"><span class="grid h-7 w-7 place-items-center rounded-md bg-white text-navy-700 ring-1 ring-slate-200"><i data-lucide="shield-check" class="h-3.5 w-3.5" aria-hidden="true"></i></span><span><span class="block text-sm font-semibold text-slate-700">Add refundable security deposit</span><span class="block text-xs text-slate-500">Shown separately from revenue</span></span></span><input id="depositEnabled" name="depositEnabled" type="checkbox" class="h-5 w-5 shrink-0 rounded border-slate-300" aria-controls="depositPanel" /></label><div id="depositPanel" class="toggle-panel mt-3 border-t border-slate-200 pt-3" hidden><div id="depositField"><label for="securityDeposit" class="mb-1.5 block text-sm font-semibold text-slate-700">Refundable security deposit (<span class="currency-symbol">$</span>)</label><input id="securityDeposit" name="securityDeposit" type="number" min="0" step="0.01" inputmode="decimal" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="depositError" /><p id="depositError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter a deposit of $0 or more.</p></div></div></div></div></fieldset>
+        </form>
+      </section>
+
+      <aside class="lg:sticky lg:top-5" aria-label="Live quotation preview"><article id="quotePreview" class="overflow-hidden rounded-2xl border border-slate-200 border-t-[7px] border-t-navy-800 bg-white shadow-paper"><div class="px-5 pb-5 pt-6 sm:px-8 sm:pt-7"><div class="flex items-start justify-between gap-5"><div><p class="text-xs font-bold tracking-[0.18em] text-navy-700">PTM EXCLUSIVE</p><h2 class="mt-2 text-xl font-bold tracking-tight text-navy-900 sm:text-2xl">Accommodation Quotation</h2></div><div class="hidden h-10 w-10 place-items-center rounded-lg bg-navy-50 text-navy-700 sm:grid"><i data-lucide="key-round" class="h-5 w-5" aria-hidden="true"></i></div></div><div class="mt-5 document-rule"></div><div class="mt-4 flex items-end justify-between gap-4"><div><p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Quote reference</p><p id="previewReference" class="mt-1 font-mono text-sm font-bold text-navy-800"></p></div><p class="text-right text-xs font-medium text-slate-400">Prepared by<br><span class="text-slate-600">PTM Exclusive</span></p></div></div><div class="border-y border-slate-100 bg-warm-50 px-5 py-5 sm:px-8"><p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Guest</p><p id="previewGuest" class="mt-1 text-lg font-bold text-navy-900">Add guest details to prepare quotation</p><p id="previewStayDates" class="mt-2 text-sm font-medium text-slate-600">—</p><div class="mt-4 grid grid-cols-3 gap-2"><div class="rounded-lg bg-white px-2.5 py-2.5 ring-1 ring-slate-200"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Stay</p><p id="summaryNights" class="mt-1 text-sm font-bold text-navy-800">—</p></div><div class="rounded-lg bg-white px-2.5 py-2.5 ring-1 ring-slate-200"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Rate</p><p id="summaryRate" class="mt-1 text-sm font-bold text-navy-800">—</p></div><div class="rounded-lg bg-white px-2.5 py-2.5 ring-1 ring-slate-200"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Discount</p><p id="summaryDiscount" class="mt-1 text-sm font-bold text-navy-800">None</p></div></div></div><div class="px-5 py-6 sm:px-8"><div class="mb-3 flex items-center justify-between"><h3 class="text-sm font-bold text-navy-900">Pricing summary</h3><span class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Amount</span></div><div class="space-y-3 text-sm"><div class="flex items-start justify-between gap-5"><span id="previewGrossLabel" class="text-slate-600">Accommodation</span><span id="previewGross" class="shrink-0 font-semibold text-slate-800">—</span></div><div id="previewDiscountRow" class="flex items-start justify-between gap-5" hidden><span id="previewDiscountLabel" class="text-emerald-700">Discount</span><span id="previewDiscount" class="shrink-0 font-semibold text-emerald-700">—</span></div><div id="previewCleaningRow" class="flex items-start justify-between gap-5" hidden><span class="text-slate-600">Cleaning fee</span><span id="previewCleaning" class="shrink-0 font-semibold text-slate-800">—</span></div></div><div class="mt-5 border-t border-slate-200 pt-4"><div class="flex items-baseline justify-between gap-5"><span class="font-bold text-navy-800">Accommodation Total</span><span id="previewAccommodationTotal" class="text-xl font-bold tracking-tight text-navy-900">—</span></div><div id="previewDepositRow" class="mt-4 flex items-start justify-between gap-5 border-t border-dashed border-slate-200 pt-4" hidden><span class="text-sm text-slate-600">Refundable Security Deposit</span><span id="previewDeposit" class="shrink-0 text-sm font-bold text-slate-800">—</span></div></div><div class="mt-6 rounded-xl bg-navy-900 p-5 text-white"><p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">Amount required</p><p id="previewAmountRequired" class="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">—</p><p class="mt-2 text-xs text-slate-300">Includes applicable accommodation charges and refundable deposit.</p></div><p id="previewValidity" class="mt-5 text-xs leading-5 text-slate-500">Quotation valid for 24 hours. Payment is required to confirm the reservation.</p></div></article><div class="no-print mt-4 grid gap-2.5 sm:grid-cols-2"><button id="whatsappButton" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-navy-900 focus:outline-none focus:ring-4 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-slate-300"><i data-lucide="message-circle" class="h-4 w-4" aria-hidden="true"></i> Copy WhatsApp</button><button id="printButton" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-navy-200 bg-white px-4 py-3 text-sm font-bold text-navy-800 transition hover:bg-navy-50 focus:outline-none focus:ring-4 focus:ring-navy-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><i data-lucide="printer" class="h-4 w-4" aria-hidden="true"></i> Print / PDF</button><button id="emailButton" type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:cursor-not-allowed disabled:text-slate-400"><i data-lucide="mail" class="h-4 w-4" aria-hidden="true"></i> Copy Email</button><button id="newQuoteButton" type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"><i data-lucide="rotate-ccw" class="h-4 w-4" aria-hidden="true"></i> New Quote</button></div></aside>
+    </div>
+  </main>
+  <div id="toast" class="no-print pointer-events-none fixed right-4 top-4 z-50 hidden rounded-lg bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-lg sm:right-6" role="status" aria-live="polite"></div>
+
+  <script>
+    /* ==================== PTM COMMERCIAL CONFIGURATION ====================
+       Update commercial rules here; calculation logic below reads this object. */
+    const CONFIG = {
+      propertyName: 'PTM Exclusive',
+      currency: 'USD',
+      currencySymbol: '$',
+      defaultNightlyRate: 65,
+      discounts: {
+        weekly: { minimumNights: 7, percentage: 5, label: 'Weekly Stay Discount' },
+        fortnight: { minimumNights: 14, percentage: 10, label: 'Fortnight Stay Discount' },
+        threeWeek: { minimumNights: 21, percentage: 20, label: 'Three-Week Stay Discount' },
+        monthly: { minimumNights: 28, percentage: 35, label: 'Monthly Stay Discount' }
+      },
+      defaultCleaningFee: 0,
+      defaultSecurityDeposit: 0,
+      quoteValidityHours: 24
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const fields = {
+      guestName: $('guestName'), checkIn: $('checkIn'), checkOut: $('checkOut'),
+      nightlyRate: $('nightlyRate'), discountType: $('discountType'),
+      discountPercentage: $('discountPercentage'), discountFlat: $('discountFlat'),
+      cleaningEnabled: $('cleaningEnabled'), cleaningFee: $('cleaningFee'),
+      depositEnabled: $('depositEnabled'), securityDeposit: $('securityDeposit')
+    };
+    let quoteReference = '';
+    let lastQuote = null;
+    let toastTimer;
+    let guestNameTouched = false;
+
+    function localDateInputValue(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function toUtcTimestamp(dateString) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString || '')) return null;
+      const [year, month, day] = dateString.split('-').map(Number);
+      const timestamp = Date.UTC(year, month - 1, day);
+      const check = new Date(timestamp);
+      return check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day ? timestamp : null;
+    }
+
+    // Uses UTC calendar dates so daylight-saving changes cannot alter the night count.
+    function calculateNights(checkIn, checkOut) {
+      const arrival = toUtcTimestamp(checkIn);
+      const departure = toUtcTimestamp(checkOut);
+      if (arrival === null || departure === null || departure <= arrival) return 0;
+      return Math.round((departure - arrival) / 86400000);
+    }
+
+    function determineAutomaticDiscount(nights) {
+      const tiers = Object.values(CONFIG.discounts).sort((a, b) => b.minimumNights - a.minimumNights);
+      return tiers.find((tier) => nights >= tier.minimumNights) || { percentage: 0, label: 'No length-of-stay discount' };
+    }
+
+    function roundMoney(amount) {
+      return Math.round((Number(amount) + Number.EPSILON) * 100) / 100;
+    }
+
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency', currency: CONFIG.currency, minimumFractionDigits: 2, maximumFractionDigits: 2
+      }).format(Math.max(0, Number.isFinite(amount) ? amount : 0));
+    }
+
+    function formatDate(dateString) {
+      const timestamp = toUtcTimestamp(dateString);
+      if (timestamp === null) return '—';
+      return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(timestamp));
+    }
+
+    function formatNights(nights) {
+      return `${nights} ${nights === 1 ? 'Night' : 'Nights'}`;
+    }
+
+    function generateQuoteReference() {
+      const now = new Date();
+      const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+      const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let identifier = '';
+      for (let i = 0; i < 4; i += 1) identifier += characters[Math.floor(Math.random() * characters.length)];
+      return `PTM-${datePart}-${identifier}`;
+    }
+
+    function inputNumber(input) {
+      const value = input.value.trim();
+      if (value === '') return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function setFieldError(fieldId, hasError) {
+      $(fieldId).classList.toggle('has-error', hasError);
+    }
+
+    function validateInputs() {
+      const guestValid = fields.guestName.value.trim().length > 0;
+      const checkInValid = toUtcTimestamp(fields.checkIn.value) !== null;
+      const checkOutValid = toUtcTimestamp(fields.checkOut.value) !== null;
+      const datesInOrder = checkInValid && checkOutValid && toUtcTimestamp(fields.checkOut.value) > toUtcTimestamp(fields.checkIn.value);
+      const rate = inputNumber(fields.nightlyRate);
+      const rateValid = rate !== null && rate >= 0;
+      const percentage = inputNumber(fields.discountPercentage);
+      const percentageValid = fields.discountType.value !== 'percentage' || (percentage !== null && percentage >= 0 && percentage <= 100);
+      const flat = inputNumber(fields.discountFlat);
+      const grossForFlat = datesInOrder && rateValid ? roundMoney(calculateNights(fields.checkIn.value, fields.checkOut.value) * rate) : 0;
+      const flatValid = fields.discountType.value !== 'flat' || (flat !== null && flat >= 0 && flat <= grossForFlat);
+      const cleaning = inputNumber(fields.cleaningFee);
+      const cleaningValid = !fields.cleaningEnabled.checked || (cleaning !== null && cleaning >= 0);
+      const deposit = inputNumber(fields.securityDeposit);
+      const depositValid = !fields.depositEnabled.checked || (deposit !== null && deposit >= 0);
+
+      $('guestField').classList.toggle('guest-touched', guestNameTouched);
+      setFieldError('guestField', !guestValid && guestNameTouched);
+      setFieldError('checkInField', !checkInValid);
+      setFieldError('checkOutField', !checkOutValid);
+      $('dateError').classList.toggle('hidden', !checkInValid || !checkOutValid || datesInOrder);
+      setFieldError('rateField', !rateValid);
+      setFieldError('percentageField', !percentageValid);
+      setFieldError('flatField', !flatValid);
+      setFieldError('cleaningField', !cleaningValid);
+      setFieldError('depositField', !depositValid);
+
+      return {
+        isValid: guestValid && datesInOrder && rateValid && percentageValid && flatValid && cleaningValid && depositValid,
+        datesInOrder, rate: rateValid ? rate : 0,
+        percentage: percentageValid && percentage !== null ? percentage : 0,
+        flat: flatValid && flat !== null ? flat : 0,
+        cleaning: cleaningValid && cleaning !== null ? cleaning : 0,
+        deposit: depositValid && deposit !== null ? deposit : 0
+      };
+    }
+
+    function calculateQuote(validation) {
+      const nights = validation.datesInOrder ? calculateNights(fields.checkIn.value, fields.checkOut.value) : 0;
+      const gross = roundMoney(nights * validation.rate);
+      let discountPercentage = 0;
+      let discountLabel = '';
+      let discountAmount = 0;
+
+      if (fields.discountType.value === 'automatic') {
+        const tier = determineAutomaticDiscount(nights);
+        discountPercentage = tier.percentage;
+        discountLabel = tier.label;
+        discountAmount = roundMoney(gross * (discountPercentage / 100));
+      } else if (fields.discountType.value === 'percentage') {
+        discountPercentage = validation.percentage;
+        discountLabel = 'Custom Percentage Discount';
+        discountAmount = roundMoney(gross * (discountPercentage / 100));
+      } else if (fields.discountType.value === 'flat') {
+        discountLabel = 'Custom Flat Discount';
+        discountAmount = Math.min(gross, roundMoney(validation.flat));
+      }
+
+      const netAccommodation = Math.max(0, roundMoney(gross - discountAmount));
+      const cleaningFee = fields.cleaningEnabled.checked ? roundMoney(validation.cleaning) : 0;
+      const securityDeposit = fields.depositEnabled.checked ? roundMoney(validation.deposit) : 0;
+      const accommodationTotal = roundMoney(netAccommodation + cleaningFee);
+      const amountRequired = roundMoney(accommodationTotal + securityDeposit);
+
+      return {
+        reference: quoteReference, guest: fields.guestName.value.trim(), checkIn: fields.checkIn.value,
+        checkOut: fields.checkOut.value, nights, rate: validation.rate, gross, discountPercentage,
+        discountLabel, discountAmount, netAccommodation,
+        cleaningEnabled: fields.cleaningEnabled.checked, cleaningFee,
+        depositEnabled: fields.depositEnabled.checked, securityDeposit,
+        accommodationTotal, amountRequired
+      };
+    }
+
+    function updateConditionalInputs() {
+      const type = fields.discountType.value;
+      $('percentagePanel').hidden = type !== 'percentage';
+      $('flatPanel').hidden = type !== 'flat';
+      $('cleaningPanel').hidden = !fields.cleaningEnabled.checked;
+      $('depositPanel').hidden = !fields.depositEnabled.checked;
+    }
+
+    function renderQuote(quote, validation) {
+      $('previewReference').textContent = quote.reference;
+      $('headerReference').textContent = quote.reference;
+      $('previewGuest').textContent = quote.guest;
+      $('previewGuest').dataset.hasGuest = Boolean(quote.guest);
+      $('previewGuest').hidden = !quote.guest;
+      $('previewGuest').previousElementSibling.hidden = !quote.guest;
+      $('previewGuest').classList.toggle('text-navy-900', Boolean(quote.guest));
+      $('previewGuest').classList.toggle('font-bold', Boolean(quote.guest));
+      $('previewStayDates').style.marginTop = quote.guest ? '' : '0';
+      $('previewStayDates').textContent = validation.datesInOrder ? `${formatDate(quote.checkIn)} → ${formatDate(quote.checkOut)}` : 'Add valid stay dates to prepare quotation';
+      $('summaryNights').textContent = validation.datesInOrder ? formatNights(quote.nights) : '—';
+      $('summaryRate').textContent = `${formatCurrency(quote.rate)} / night`;
+      $('summaryDiscount').textContent = quote.discountPercentage > 0 ? `${quote.discountPercentage}% off` : 'None';
+      $('previewGrossLabel').textContent = validation.datesInOrder ? `${formatNights(quote.nights)} × ${formatCurrency(quote.rate)}` : 'Accommodation';
+      $('previewGross').textContent = formatCurrency(quote.gross);
+
+      const showDiscount = quote.discountAmount > 0;
+      $('previewDiscountRow').hidden = !showDiscount;
+      $('previewDiscountLabel').textContent = quote.discountPercentage > 0 ? `${quote.discountLabel} (${quote.discountPercentage}%)` : quote.discountLabel;
+      $('previewDiscount').textContent = `−${formatCurrency(quote.discountAmount)}`;
+
+      const automaticDiscount = fields.discountType.value === 'automatic' && quote.discountPercentage > 0 && validation.datesInOrder;
+      $('automaticDiscountStatus').hidden = !automaticDiscount;
+      const compactDiscountLabel = quote.discountLabel.replace(' Discount', '');
+      $('automaticDiscountText').textContent = automaticDiscount ? `${compactDiscountLabel} · ${quote.discountPercentage}% applied` : '';
+
+      $('previewCleaningRow').hidden = !(quote.cleaningEnabled && quote.cleaningFee > 0);
+      $('previewCleaning').textContent = formatCurrency(quote.cleaningFee);
+      $('previewAccommodationTotal').textContent = formatCurrency(quote.accommodationTotal);
+      $('previewDepositRow').hidden = !(quote.depositEnabled && quote.securityDeposit > 0);
+      $('previewDeposit').textContent = formatCurrency(quote.securityDeposit);
+      $('previewAmountRequired').textContent = formatCurrency(quote.amountRequired);
+      document.querySelector('#quotePreview .bg-navy-900 p:last-child').textContent = quote.depositEnabled && quote.securityDeposit > 0
+        ? 'Includes accommodation charges and refundable security deposit.'
+        : 'Includes applicable accommodation charges.';
+      $('previewValidity').textContent = `Quotation valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`;
+
+      const validActions = validation.isValid;
+      ['whatsappButton', 'emailButton', 'printButton'].forEach((id) => { $(id).disabled = !validActions; });
+    }
+
+    function updateQuote() {
+      updateConditionalInputs();
+      const validation = validateInputs();
+      const quote = calculateQuote(validation);
+      lastQuote = quote;
+      $('durationHint').textContent = validation.datesInOrder ? formatNights(quote.nights) : 'Select a valid check-in and later check-out date.';
+      renderQuote(quote, validation);
+    }
+
+    function buildWhatsAppMessage(quote) {
+      const lines = [
+        '*PTM EXCLUSIVE*',
+        '*ACCOMMODATION QUOTATION*',
+        '',
+        `Quote Ref: ${quote.reference}`,
+        '',
+        `*Guest:* ${quote.guest}`,
+        `*Check-in:* ${formatDate(quote.checkIn)}`,
+        `*Check-out:* ${formatDate(quote.checkOut)}`,
+        `*Duration:* ${formatNights(quote.nights)}`,
+        '',
+        '--------------------------------',
+        '',
+        `Nightly Rate: ${formatCurrency(quote.rate)}`,
+        `Accommodation Subtotal: ${formatCurrency(quote.gross)}`
+      ];
+      if (quote.discountAmount > 0) lines.push(`${quote.discountLabel}${quote.discountPercentage > 0 ? ` (${quote.discountPercentage}%)` : ''}: -${formatCurrency(quote.discountAmount)}`);
+      if (quote.cleaningEnabled && quote.cleaningFee > 0) lines.push(`Cleaning Fee: ${formatCurrency(quote.cleaningFee)}`);
+      lines.push('', `*Accommodation Total: ${formatCurrency(quote.accommodationTotal)}*`);
+      if (quote.depositEnabled && quote.securityDeposit > 0) lines.push(`Refundable Security Deposit: ${formatCurrency(quote.securityDeposit)}`);
+      lines.push('', '--------------------------------', '', `*AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}*`, '', '_Payment is required to confirm the reservation._', `_Quotation valid for ${CONFIG.quoteValidityHours} hours._`);
+      return lines.join('\n');
+    }
+
+    function buildEmailMessage(quote) {
+      const lines = [
+        'PTM EXCLUSIVE',
+        'ACCOMMODATION QUOTATION',
+        '',
+        `Quote Reference: ${quote.reference}`,
+        `Guest: ${quote.guest}`,
+        `Check-in: ${formatDate(quote.checkIn)}`,
+        `Check-out: ${formatDate(quote.checkOut)}`,
+        `Duration: ${formatNights(quote.nights)}`,
+        '',
+        'PRICING',
+        `Nightly Rate: ${formatCurrency(quote.rate)}`,
+        `Accommodation Subtotal: ${formatCurrency(quote.gross)}`
+      ];
+      if (quote.discountAmount > 0) lines.push(`${quote.discountLabel}${quote.discountPercentage > 0 ? ` (${quote.discountPercentage}%)` : ''}: -${formatCurrency(quote.discountAmount)}`);
+      if (quote.cleaningEnabled && quote.cleaningFee > 0) lines.push(`Cleaning Fee: ${formatCurrency(quote.cleaningFee)}`);
+      lines.push(`Accommodation Total: ${formatCurrency(quote.accommodationTotal)}`);
+      if (quote.depositEnabled && quote.securityDeposit > 0) lines.push(`Refundable Security Deposit: ${formatCurrency(quote.securityDeposit)}`);
+      lines.push('', `AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}`, '', `This quotation is valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`);
+      return lines.join('\n');
+    }
+
+    function showToast(message, isError = false) {
+      const toast = $('toast');
+      toast.textContent = message;
+      toast.classList.toggle('bg-red-700', isError);
+      toast.classList.toggle('bg-navy-900', !isError);
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.add('hidden'), 2200);
+    }
+
+    async function copyToClipboard(text, successMessage = 'Copied to clipboard') {
+      try {
+        if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
+        await navigator.clipboard.writeText(text);
+        showToast(successMessage);
+      } catch (error) {
+        // Local file previews may not expose Clipboard API, so use a safe browser fallback.
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+        document.body.appendChild(area);
+        area.select();
+        try {
+          const copied = document.execCommand('copy');
+          if (!copied) throw new Error('Copy command failed');
+          showToast(successMessage);
+        } catch (fallbackError) {
+          showToast('Unable to copy. Please select and copy manually.', true);
+        } finally {
+          document.body.removeChild(area);
+        }
+      }
+    }
+
+    function resetQuote() {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      fields.guestName.value = '';
+      guestNameTouched = false;
+      fields.checkIn.value = localDateInputValue(today);
+      fields.checkOut.value = localDateInputValue(tomorrow);
+      fields.nightlyRate.value = CONFIG.defaultNightlyRate.toFixed(2);
+      fields.discountType.value = 'automatic';
+      fields.discountPercentage.value = '';
+      fields.discountFlat.value = '';
+      fields.cleaningEnabled.checked = false;
+      fields.cleaningFee.value = CONFIG.defaultCleaningFee.toFixed(2);
+      fields.depositEnabled.checked = false;
+      fields.securityDeposit.value = CONFIG.defaultSecurityDeposit.toFixed(2);
+      quoteReference = generateQuoteReference();
+      updateQuote();
+      fields.guestName.focus();
+    }
+
+    function confirmAndResetQuote() {
+      const hasQuoteData = fields.guestName.value.trim() || fields.cleaningEnabled.checked || fields.depositEnabled.checked || fields.discountType.value !== 'automatic';
+      if (!hasQuoteData || window.confirm('Start a new quote? Current details will be cleared.')) resetQuote();
+    }
+
+    function initialise() {
+      $('guestError').remove();
+      fields.guestName.removeAttribute('aria-describedby');
+      document.querySelectorAll('.currency-symbol').forEach((element) => { element.textContent = CONFIG.currencySymbol; });
+      fields.guestName.addEventListener('input', () => { guestNameTouched = true; });
+      fields.guestName.addEventListener('blur', () => { guestNameTouched = true; updateQuote(); });
+      document.querySelectorAll('input, select').forEach((element) => {
+        element.addEventListener('input', updateQuote);
+        element.addEventListener('change', updateQuote);
+      });
+      $('printButton').before($('emailButton'));
+      $('whatsappButton').addEventListener('click', () => copyToClipboard(buildWhatsAppMessage(lastQuote), '✓ Quote copied for WhatsApp'));
+      $('emailButton').addEventListener('click', () => copyToClipboard(buildEmailMessage(lastQuote), '✓ Email quotation copied'));
+      $('printButton').addEventListener('click', () => window.print());
+      $('newQuoteButton').addEventListener('click', confirmAndResetQuote);
+      resetQuote();
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    initialise();
+  </script>
+</body>
+</html>
