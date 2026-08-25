@@ -26,9 +26,9 @@
     .field-error { display: none; }
     .has-error .field-error { display: block; }
     .has-error input, .has-error select { border-color: #dc2626; }
-    #guestError { display: none !important; }
-    #guestField.has-error:not(.guest-touched) .field-error { display: none; }
-    #guestField.has-error:not(.guest-touched) input { border-color: #cbd5e1; }
+    #guestField.has-error:not(.guest-show-error) .field-error { display: none; }
+    #guestField.has-error:not(.guest-show-error) input { border-color: #cbd5e1; }
+    .output-action-unavailable { cursor: not-allowed; opacity: 0.55; }
     #quotePreview [hidden] { display: none !important; }
     #previewGuest:not([data-has-guest="true"]) { display: none; }
     #quotePreview p:has(+ #previewGuest:not([data-has-guest="true"])) { display: none; }
@@ -133,6 +133,7 @@
     let lastQuote = null;
     let toastTimer;
     let guestNameTouched = false;
+    let outputActionAttempted = false;
 
     function localDateInputValue(date) {
       const year = date.getFullYear();
@@ -219,8 +220,9 @@
       const deposit = inputNumber(fields.securityDeposit);
       const depositValid = !fields.depositEnabled.checked || (deposit !== null && deposit >= 0);
 
-      $('guestField').classList.toggle('guest-touched', guestNameTouched);
-      setFieldError('guestField', !guestValid && guestNameTouched);
+      const showGuestError = !guestValid && (guestNameTouched || outputActionAttempted);
+      $('guestField').classList.toggle('guest-show-error', showGuestError);
+      setFieldError('guestField', showGuestError);
       setFieldError('checkInField', !checkInValid);
       setFieldError('checkOutField', !checkOutValid);
       $('dateError').classList.toggle('hidden', !checkInValid || !checkOutValid || datesInOrder);
@@ -324,7 +326,12 @@
       $('previewValidity').textContent = `Quotation valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`;
 
       const validActions = validation.isValid;
-      ['whatsappButton', 'emailButton', 'printButton'].forEach((id) => { $(id).disabled = !validActions; });
+      ['whatsappButton', 'emailButton', 'printButton'].forEach((id) => {
+        const button = $(id);
+        button.disabled = false;
+        button.setAttribute('aria-disabled', String(!validActions));
+        button.classList.toggle('output-action-unavailable', !validActions);
+      });
     }
 
     function updateQuote() {
@@ -334,6 +341,7 @@
       lastQuote = quote;
       $('durationHint').textContent = validation.datesInOrder ? formatNights(quote.nights) : 'Select a valid check-in and later check-out date.';
       renderQuote(quote, validation);
+      return validation;
     }
 
     function buildWhatsAppMessage(quote) {
@@ -425,6 +433,7 @@
       tomorrow.setDate(today.getDate() + 1);
       fields.guestName.value = '';
       guestNameTouched = false;
+      outputActionAttempted = false;
       fields.checkIn.value = localDateInputValue(today);
       fields.checkOut.value = localDateInputValue(tomorrow);
       fields.nightlyRate.value = CONFIG.defaultNightlyRate.toFixed(2);
@@ -445,9 +454,17 @@
       if (!hasQuoteData || window.confirm('Start a new quote? Current details will be cleared.')) resetQuote();
     }
 
+    function prepareOutputAction() {
+      outputActionAttempted = true;
+      const validation = updateQuote();
+      if (!validation.isValid) {
+        if (!fields.guestName.value.trim()) fields.guestName.focus();
+        return false;
+      }
+      return true;
+    }
+
     function initialise() {
-      $('guestError').remove();
-      fields.guestName.removeAttribute('aria-describedby');
       document.querySelectorAll('.currency-symbol').forEach((element) => { element.textContent = CONFIG.currencySymbol; });
       fields.guestName.addEventListener('input', () => { guestNameTouched = true; });
       fields.guestName.addEventListener('blur', () => { guestNameTouched = true; updateQuote(); });
@@ -456,9 +473,15 @@
         element.addEventListener('change', updateQuote);
       });
       $('printButton').before($('emailButton'));
-      $('whatsappButton').addEventListener('click', () => copyToClipboard(buildWhatsAppMessage(lastQuote), '✓ Quote copied for WhatsApp'));
-      $('emailButton').addEventListener('click', () => copyToClipboard(buildEmailMessage(lastQuote), '✓ Email quotation copied'));
-      $('printButton').addEventListener('click', () => window.print());
+      $('whatsappButton').addEventListener('click', () => {
+        if (prepareOutputAction()) copyToClipboard(buildWhatsAppMessage(lastQuote), '✓ Quote copied for WhatsApp');
+      });
+      $('emailButton').addEventListener('click', () => {
+        if (prepareOutputAction()) copyToClipboard(buildEmailMessage(lastQuote), '✓ Email quotation copied');
+      });
+      $('printButton').addEventListener('click', () => {
+        if (prepareOutputAction()) window.print();
+      });
       $('newQuoteButton').addEventListener('click', confirmAndResetQuote);
       resetQuote();
       if (window.lucide) window.lucide.createIcons();
