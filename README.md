@@ -14,6 +14,10 @@ Open `index.html` in a modern browser. The Tailwind CSS and Lucide icon CDNs nee
 
 Expected URL: `https://vengaida.github.io/ptm_quote_engine/`
 
+## Install on an iPhone
+
+Open the GitHub Pages URL in Safari, select **Share**, then **Add to Home Screen**. The installed app is named **PTM Quotes** and opens in standalone mode where supported.
+
 ## Deploy to Cloudflare Pages
 
 1. Create a new **Pages** project and connect the repository that contains `index.html`.
