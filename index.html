@@ -114,7 +114,8 @@
     /* ==================== PTM COMMERCIAL CONFIGURATION ====================
        Update commercial rules here; calculation logic below reads this object. */
     const CONFIG = {
-      propertyName: 'PTM Exclusive',
+      operatorName: 'PTM Exclusive',
+      propertyName: 'Cozy Up On 5th',
       currency: 'USD',
       currencySymbol: '$',
       defaultNightlyRate: 65,
@@ -295,7 +296,29 @@
       $('depositPanel').hidden = !fields.depositEnabled.checked;
     }
 
+    function renderCustomerBranding() {
+      const documentTitle = document.querySelector('#quotePreview h2');
+      let propertyElement = $('previewPropertyName');
+      if (!propertyElement) {
+        propertyElement = documentTitle.previousElementSibling;
+        propertyElement.id = 'previewPropertyName';
+        const operatorElement = document.createElement('p');
+        operatorElement.id = 'previewOperatorName';
+        propertyElement.insertAdjacentElement('afterend', operatorElement);
+      }
+      const operatorElement = $('previewOperatorName');
+      propertyElement.textContent = CONFIG.propertyName.toUpperCase();
+      propertyElement.className = 'text-xl font-bold tracking-tight text-navy-900 sm:text-2xl';
+      operatorElement.textContent = `by ${CONFIG.operatorName}`;
+      operatorElement.className = 'mt-1 text-xs font-medium text-slate-500';
+      documentTitle.className = 'mt-3 text-xs font-bold uppercase tracking-[0.18em] text-navy-700';
+
+      const preparedBy = document.querySelector('#quotePreview .text-right span');
+      if (preparedBy) preparedBy.textContent = CONFIG.operatorName;
+    }
+
     function renderQuote(quote, validation) {
+      renderCustomerBranding();
       $('previewReference').textContent = quote.reference;
       $('headerReference').textContent = quote.reference;
       $('previewGuest').textContent = quote.guest;
@@ -354,9 +377,9 @@
 
     function buildWhatsAppMessage(quote) {
       const lines = [
-        '*PTM EXCLUSIVE*',
+        `*${CONFIG.propertyName.toUpperCase()}*`,
+        `_by ${CONFIG.operatorName}_`,
         '*ACCOMMODATION QUOTATION*',
-        '',
         `Quote Ref: ${quote.reference}`,
         '',
         `*Guest:* ${quote.guest}`,
@@ -379,7 +402,8 @@
 
     function buildEmailMessage(quote) {
       const lines = [
-        'PTM EXCLUSIVE',
+        CONFIG.propertyName.toUpperCase(),
+        `by ${CONFIG.operatorName}`,
         'ACCOMMODATION QUOTATION',
         '',
         `Quote Reference: ${quote.reference}`,
