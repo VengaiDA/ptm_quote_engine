@@ -127,6 +127,7 @@
       },
       defaultCleaningFee: 0,
       defaultSecurityDeposit: 0,
+      paymentOptionsText: 'Cash and EcoCash payments are available.',
       quoteValidityHours: 24
     };
 
@@ -396,7 +397,7 @@
       if (quote.cleaningEnabled && quote.cleaningFee > 0) lines.push(`Cleaning Fee: ${formatCurrency(quote.cleaningFee)}`);
       lines.push('', `*Accommodation Total: ${formatCurrency(quote.accommodationTotal)}*`);
       if (quote.depositEnabled && quote.securityDeposit > 0) lines.push(`Refundable Security Deposit: ${formatCurrency(quote.securityDeposit)}`);
-      lines.push('', '--------------------------------', '', `*AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}*`, '', '_Payment is required to confirm the reservation._', `_Quotation valid for ${CONFIG.quoteValidityHours} hours._`);
+      lines.push('', '--------------------------------', '', `*AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}*`, '', `Payment Options: ${CONFIG.paymentOptionsText}`, '', '_Payment is required to confirm the reservation._', `_Quotation valid for ${CONFIG.quoteValidityHours} hours._`);
       return lines.join('\n');
     }
 
