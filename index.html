@@ -118,12 +118,22 @@
       propertyName: 'Cozy Up On 5th',
       currency: 'USD',
       currencySymbol: '$',
-      defaultNightlyRate: 65,
-      discounts: {
-        weekly: { minimumNights: 7, percentage: 5, label: 'Weekly Stay Discount' },
-        fortnight: { minimumNights: 14, percentage: 10, label: 'Fortnight Stay Discount' },
-        threeWeek: { minimumNights: 21, percentage: 20, label: 'Three-Week Stay Discount' },
-        monthly: { minimumNights: 28, percentage: 35, label: 'Monthly Stay Discount' }
+      productTypes: {
+        completePackage: {
+          label: 'Complete Package',
+          defaultNightlyRate: 70,
+          discounts: {
+            weekly: { minimumNights: 7, percentage: 5, label: 'Weekly Stay Discount' },
+            fortnight: { minimumNights: 14, percentage: 10, label: 'Fortnight Stay Discount' },
+            threeWeek: { minimumNights: 21, percentage: 15, label: 'Three-Week Stay Discount' },
+            monthly: { minimumNights: 30, percentage: 20, label: 'Monthly Stay Discount' }
+          }
+        },
+        flexOption: {
+          label: 'Flex Option',
+          defaultNightlyRate: 50,
+          discounts: {}
+        }
       },
       defaultCleaningFee: 0,
       defaultSecurityDeposit: 0,
@@ -133,7 +143,7 @@
 
     const $ = (id) => document.getElementById(id);
     const fields = {
-      guestName: $('guestName'), checkIn: $('checkIn'), checkOut: $('checkOut'),
+      guestName: $('guestName'), checkIn: $('checkIn'), checkOut: $('checkOut'), productType: null,
       nightlyRate: $('nightlyRate'), discountType: $('discountType'),
       discountPercentage: $('discountPercentage'), discountFlat: $('discountFlat'),
       cleaningEnabled: $('cleaningEnabled'), cleaningFee: $('cleaningFee'),
@@ -168,8 +178,16 @@
       return Math.round((departure - arrival) / 86400000);
     }
 
-    function determineAutomaticDiscount(nights) {
-      const tiers = Object.values(CONFIG.discounts).sort((a, b) => b.minimumNights - a.minimumNights);
+    function getSelectedProductType() {
+      return CONFIG.productTypes[fields.productType?.value] || CONFIG.productTypes.completePackage;
+    }
+
+    function hasAutomaticDiscounts(productType = getSelectedProductType()) {
+      return Object.keys(productType.discounts).length > 0;
+    }
+
+    function determineAutomaticDiscount(nights, productType = getSelectedProductType()) {
+      const tiers = Object.values(productType.discounts).sort((a, b) => b.minimumNights - a.minimumNights);
       return tiers.find((tier) => nights >= tier.minimumNights) || { percentage: 0, label: 'No length-of-stay discount' };
     }
 
@@ -207,6 +225,40 @@
       if (value === '') return null;
       const number = Number(value);
       return Number.isFinite(number) ? number : null;
+    }
+
+    function initialiseProductTypeControl() {
+      const productTypeField = document.createElement('div');
+      productTypeField.className = 'mb-4';
+      const label = document.createElement('label');
+      label.htmlFor = 'productType';
+      label.className = 'mb-1.5 block text-sm font-semibold text-slate-700';
+      label.textContent = 'Product type';
+      const select = document.createElement('select');
+      select.id = 'productType';
+      select.name = 'productType';
+      select.className = 'block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100';
+      Object.entries(CONFIG.productTypes).forEach(([key, productType]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = productType.label;
+        select.appendChild(option);
+      });
+      productTypeField.append(label, select);
+      $('rateField').parentElement.insertBefore(productTypeField, $('rateField'));
+      fields.productType = select;
+    }
+
+    function updateProductTypeControls(resetRate = false) {
+      const productType = getSelectedProductType();
+      const automaticOption = fields.discountType.querySelector('option[value="automatic"]');
+      const automaticAvailable = hasAutomaticDiscounts(productType);
+      automaticOption.disabled = !automaticAvailable;
+      automaticOption.textContent = automaticAvailable
+        ? 'Length of Stay — Automatic'
+        : 'Length of Stay — Automatic (Complete Package only)';
+      if (!automaticAvailable && fields.discountType.value === 'automatic') fields.discountType.value = 'none';
+      if (resetRate) fields.nightlyRate.value = productType.defaultNightlyRate.toFixed(2);
     }
 
     function setFieldError(fieldId, hasError) {
@@ -253,14 +305,15 @@
     }
 
     function calculateQuote(validation) {
+      const productType = getSelectedProductType();
       const nights = validation.datesInOrder ? calculateNights(fields.checkIn.value, fields.checkOut.value) : 0;
       const gross = roundMoney(nights * validation.rate);
       let discountPercentage = 0;
       let discountLabel = '';
       let discountAmount = 0;
 
-      if (fields.discountType.value === 'automatic') {
-        const tier = determineAutomaticDiscount(nights);
+      if (fields.discountType.value === 'automatic' && hasAutomaticDiscounts(productType)) {
+        const tier = determineAutomaticDiscount(nights, productType);
         discountPercentage = tier.percentage;
         discountLabel = tier.label;
         discountAmount = roundMoney(gross * (discountPercentage / 100));
@@ -281,7 +334,7 @@
 
       return {
         reference: quoteReference, guest: fields.guestName.value.trim(), checkIn: fields.checkIn.value,
-        checkOut: fields.checkOut.value, nights, rate: validation.rate, gross, discountPercentage,
+        checkOut: fields.checkOut.value, productType: productType.label, nights, rate: validation.rate, gross, discountPercentage,
         discountLabel, discountAmount, netAccommodation,
         cleaningEnabled: fields.cleaningEnabled.checked, cleaningFee,
         depositEnabled: fields.depositEnabled.checked, securityDeposit,
@@ -290,6 +343,7 @@
     }
 
     function updateConditionalInputs() {
+      updateProductTypeControls();
       const type = fields.discountType.value;
       $('percentagePanel').hidden = type !== 'percentage';
       $('flatPanel').hidden = type !== 'flat';
@@ -318,6 +372,17 @@
       if (preparedBy) preparedBy.textContent = CONFIG.operatorName;
     }
 
+    function renderProductType(quote) {
+      let productTypeElement = $('previewProductType');
+      if (!productTypeElement) {
+        productTypeElement = document.createElement('p');
+        productTypeElement.id = 'previewProductType';
+        productTypeElement.className = 'mt-2 text-xs font-semibold text-slate-500';
+        $('previewStayDates').insertAdjacentElement('afterend', productTypeElement);
+      }
+      productTypeElement.textContent = `Product Type: ${quote.productType}`;
+    }
+
     function renderQuote(quote, validation) {
       renderCustomerBranding();
       $('previewReference').textContent = quote.reference;
@@ -330,6 +395,7 @@
       $('previewGuest').classList.toggle('font-bold', Boolean(quote.guest));
       $('previewStayDates').style.marginTop = quote.guest ? '' : '0';
       $('previewStayDates').textContent = validation.datesInOrder ? `${formatDate(quote.checkIn)} → ${formatDate(quote.checkOut)}` : 'Add valid stay dates to prepare quotation';
+      renderProductType(quote);
       $('summaryNights').textContent = validation.datesInOrder ? formatNights(quote.nights) : '—';
       $('summaryRate').textContent = `${formatCurrency(quote.rate)} / night`;
       $('summaryDiscount').textContent = quote.discountPercentage > 0 ? `${quote.discountPercentage}% off` : 'None';
@@ -387,6 +453,7 @@
         `*Check-in:* ${formatDate(quote.checkIn)}`,
         `*Check-out:* ${formatDate(quote.checkOut)}`,
         `*Duration:* ${formatNights(quote.nights)}`,
+        `*Product Type:* ${quote.productType}`,
         '',
         '--------------------------------',
         '',
@@ -412,6 +479,7 @@
         `Check-in: ${formatDate(quote.checkIn)}`,
         `Check-out: ${formatDate(quote.checkOut)}`,
         `Duration: ${formatNights(quote.nights)}`,
+        `Product Type: ${quote.productType}`,
         '',
         'PRICING',
         `Nightly Rate: ${formatCurrency(quote.rate)}`,
@@ -469,8 +537,9 @@
       outputActionAttempted = false;
       fields.checkIn.value = localDateInputValue(today);
       fields.checkOut.value = localDateInputValue(tomorrow);
-      fields.nightlyRate.value = CONFIG.defaultNightlyRate.toFixed(2);
+      fields.productType.value = 'completePackage';
       fields.discountType.value = 'automatic';
+      updateProductTypeControls(true);
       fields.discountPercentage.value = '';
       fields.discountFlat.value = '';
       fields.cleaningEnabled.checked = false;
@@ -483,7 +552,7 @@
     }
 
     function confirmAndResetQuote() {
-      const hasQuoteData = fields.guestName.value.trim() || fields.cleaningEnabled.checked || fields.depositEnabled.checked || fields.discountType.value !== 'automatic';
+      const hasQuoteData = fields.guestName.value.trim() || fields.cleaningEnabled.checked || fields.depositEnabled.checked || fields.productType.value !== 'completePackage' || fields.discountType.value !== 'automatic';
       if (!hasQuoteData || window.confirm('Start a new quote? Current details will be cleared.')) resetQuote();
     }
 
@@ -499,8 +568,13 @@
 
     function initialise() {
       document.querySelectorAll('.currency-symbol').forEach((element) => { element.textContent = CONFIG.currencySymbol; });
+      initialiseProductTypeControl();
       fields.guestName.addEventListener('input', () => { guestNameTouched = true; });
       fields.guestName.addEventListener('blur', () => { guestNameTouched = true; updateQuote(); });
+      fields.productType.addEventListener('change', () => {
+        fields.discountType.value = hasAutomaticDiscounts() ? 'automatic' : 'none';
+        updateProductTypeControls(true);
+      });
       document.querySelectorAll('input, select').forEach((element) => {
         element.addEventListener('input', updateQuote);
         element.addEventListener('change', updateQuote);
