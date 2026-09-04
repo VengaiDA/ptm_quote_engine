@@ -138,7 +138,12 @@
       defaultCleaningFee: 0,
       defaultSecurityDeposit: 0,
       paymentOptionsText: 'Cash and EcoCash payments are available.',
-      quoteValidityHours: 24
+      quoteValidityHours: 24,
+      ecocashAgent: {
+        name: 'Natmed',
+        code: '029327',
+        ussdPrefix: '*153*3*1*'
+      }
     };
 
     const $ = (id) => document.getElementById(id);
@@ -422,6 +427,7 @@
         ? 'Includes accommodation charges and refundable security deposit.'
         : 'Includes applicable accommodation charges.';
       $('previewValidity').textContent = `Quotation valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`;
+      updatePaymentTools(quote.amountRequired);
 
       const validActions = validation.isValid;
       ['whatsappButton', 'emailButton', 'printButton'].forEach((id) => {
@@ -528,6 +534,70 @@
       }
     }
 
+    function normaliseUssdAmount(value) {
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount <= 0) return '';
+      return String(roundMoney(amount));
+    }
+
+    function buildEcocashUssd(value) {
+      const amount = normaliseUssdAmount(value);
+      if (!amount) return '';
+      return `${CONFIG.ecocashAgent.ussdPrefix}${CONFIG.ecocashAgent.code}*${amount}#`;
+    }
+
+    function updatePaymentTools(value = null) {
+      const amountInput = $('paymentAmount');
+      const preview = $('ecocashUssdPreview');
+      const copyButton = $('copyUssdButton');
+      if (!amountInput || !preview || !copyButton) return;
+
+      if (value !== null && document.activeElement !== amountInput) {
+        amountInput.value = normaliseUssdAmount(value);
+      }
+
+      const code = buildEcocashUssd(amountInput.value);
+      preview.textContent = code || `${CONFIG.ecocashAgent.ussdPrefix}${CONFIG.ecocashAgent.code}*amount#`;
+      copyButton.disabled = !code;
+    }
+
+    function initialisePaymentTools() {
+      const panel = document.createElement('section');
+      panel.id = 'paymentToolsPanel';
+      panel.className = 'no-print mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-soft';
+      panel.setAttribute('aria-labelledby', 'payment-tools-title');
+      panel.innerHTML = `
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Internal payment tool</p>
+            <h3 id="payment-tools-title" class="mt-1 text-sm font-bold text-navy-900">EcoCash Agent Cash-Out</h3>
+          </div>
+          <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Approved</span>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div>
+            <label for="paymentAmount" class="mb-1.5 block text-sm font-semibold text-slate-700">Amount</label>
+            <div class="relative">
+              <span class="money-prefix absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-semibold text-slate-500">${CONFIG.currencySymbol}</span>
+              <input id="paymentAmount" type="number" min="0" step="0.01" inputmode="decimal" aria-describedby="paymentToolsHint" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white py-3 pl-8 pr-3.5 text-base font-semibold text-navy-900 outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100">
+            </div>
+          </div>
+          <button id="copyUssdButton" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-navy-900 focus:outline-none focus:ring-4 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-slate-300">
+            <i data-lucide="copy" class="h-4 w-4" aria-hidden="true"></i> Copy USSD
+          </button>
+        </div>
+        <div class="mt-3 rounded-lg bg-warm-50 p-3 ring-1 ring-slate-200">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <span id="ecocashAgentDetails"></span><span>EcoCash</span>
+          </div>
+          <code id="ecocashUssdPreview" class="mt-2 block break-all font-mono text-sm font-bold text-navy-800"></code>
+        </div>
+        <p id="paymentToolsHint" class="mt-2 text-xs leading-5 text-slate-500">Copy USSD places only the raw short code on the clipboard.</p>`;
+      $('quotePreview').insertAdjacentElement('afterend', panel);
+      $('ecocashAgentDetails').textContent = `${CONFIG.ecocashAgent.name} · Agent ${CONFIG.ecocashAgent.code}`;
+      updatePaymentTools();
+    }
+
     function resetQuote() {
       const today = new Date();
       const tomorrow = new Date(today);
@@ -569,6 +639,7 @@
     function initialise() {
       document.querySelectorAll('.currency-symbol').forEach((element) => { element.textContent = CONFIG.currencySymbol; });
       initialiseProductTypeControl();
+      initialisePaymentTools();
       fields.guestName.addEventListener('input', () => { guestNameTouched = true; });
       fields.guestName.addEventListener('blur', () => { guestNameTouched = true; updateQuote(); });
       fields.productType.addEventListener('change', () => {
@@ -585,6 +656,15 @@
       });
       $('emailButton').addEventListener('click', () => {
         if (prepareOutputAction()) copyToClipboard(buildEmailMessage(lastQuote), '✓ Email quotation copied');
+      });
+      $('paymentAmount').addEventListener('input', () => updatePaymentTools());
+      $('copyUssdButton').addEventListener('click', () => {
+        const code = buildEcocashUssd($('paymentAmount').value);
+        if (!code) {
+          showToast('Enter a payment amount first.', true);
+          return;
+        }
+        copyToClipboard(code, '✓ USSD code copied');
       });
       $('printButton').addEventListener('click', () => {
         if (prepareOutputAction()) window.print();
