@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PTM Agent Lite: campaign sharing and public stay enquiries." />
+  <meta name="application-name" content="PTM Agent Lite" />
+  <meta name="theme-color" content="#091e31" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PTM Agent Lite" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="../icon-192.png" />
+  <title>PTM Agent Lite</title>
+  <style>
+    :root {
+      --navy-900: #091e31;
+      --navy-800: #102b43;
+      --navy-700: #183650;
+      --navy-600: #284a68;
+      --navy-500: #355673;
+      --navy-100: #e2ebf0;
+      --navy-50: #f3f6f8;
+      --warm-100: #f4f4f0;
+      --warm-50: #fafaf8;
+      --warm-200: #e9e9e3;
+      --white: #fff;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-300: #cbd5e1;
+      --slate-200: #e2e8f0;
+      --emerald-800: #065f46;
+      --emerald-100: #d1fae5;
+      --emerald-50: #ecfdf5;
+      --rose-700: #b91c1c;
+      --rose-100: #fee2e2;
+      --shadow-soft: 0 14px 38px rgba(16, 43, 67, .08);
+      --shadow-paper: 0 18px 44px rgba(16, 43, 67, .12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-width: 320px;
+      margin: 0;
+      background: var(--warm-100);
+      color: var(--slate-800);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 3px solid #b8d1e2; outline-offset: 3px; }
+
+    .site-header { background: var(--navy-900); border-bottom: 1px solid rgba(255,255,255,.12); color: var(--white); }
+    .header-inner, .page { width: min(100% - 32px, 1184px); margin: 0 auto; }
+    .header-inner { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 0; }
+    .brand { display: flex; min-width: 0; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-mark { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 7px; object-fit: contain; }
+    .brand-copy { min-width: 0; }
+    .brand-title { margin: 0; color: var(--white); font-size: 1rem; font-weight: 800; letter-spacing: -.02em; }
+    .brand-subtitle { margin: 2px 0 0; color: #cbd5e1; font-size: .67rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .header-nav { display: flex; align-items: center; gap: 18px; color: #dbe5ec; font-size: .8rem; font-weight: 700; }
+    .header-nav a { text-decoration: none; }
+    .header-nav a:hover { color: var(--white); }
+
+    .page { padding: 28px 0 40px; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 28px; align-items: stretch; margin-bottom: 28px; }
+    .hero-copy { padding: 14px 0; }
+    .eyebrow, .section-kicker, .meta-label { margin: 0; color: var(--navy-600); font-size: .66rem; font-weight: 800; letter-spacing: .17em; text-transform: uppercase; }
+    h1, h2, h3, p { overflow-wrap: anywhere; }
+    h1 { max-width: 720px; margin: 9px 0 0; color: var(--navy-900); font-size: clamp(2rem, 5vw, 3.3rem); line-height: 1.06; letter-spacing: -.045em; }
+    .hero-copy > .lede { max-width: 650px; margin: 16px 0 0; color: var(--slate-600); font-size: 1.03rem; line-height: 1.7; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .trust-note { display: flex; align-items: flex-start; gap: 9px; margin: 18px 0 0; color: var(--slate-500); font-size: .79rem; }
+    .trust-note svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--navy-600); }
+    .hero-panel { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border: 1px solid var(--slate-200); border-top: 7px solid var(--navy-800); border-radius: 16px; background: var(--white); padding: 22px; box-shadow: var(--shadow-soft); }
+    .hero-panel p { margin: 0; }
+    .hero-panel .panel-title { color: var(--navy-900); font-size: 1.12rem; font-weight: 800; letter-spacing: -.02em; }
+    .hero-panel .panel-copy { margin-top: 6px; color: var(--slate-600); font-size: .88rem; line-height: 1.6; }
+    .hero-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .hero-step { border: 1px solid var(--slate-200); border-radius: 10px; background: var(--warm-50); padding: 10px; }
+    .hero-step strong { display: block; color: var(--navy-800); font-size: .92rem; }
+    .hero-step span { display: block; margin-top: 2px; color: var(--slate-500); font-size: .7rem; line-height: 1.35; }
+
+    .card { border: 1px solid var(--slate-200); border-radius: 16px; background: var(--white); box-shadow: var(--shadow-soft); }
+    .card-heading { margin: 0; color: var(--navy-900); font-size: 1.18rem; font-weight: 800; letter-spacing: -.02em; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 15px; }
+    .section-heading p:not(.section-kicker) { margin: 4px 0 0; color: var(--slate-500); font-size: .87rem; }
+
+    .campaign-hub { padding: 22px; }
+    .campaign-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(280px, .88fr); gap: 22px; align-items: center; }
+    .campaign-artwork-wrap { position: relative; overflow: hidden; border: 1px solid var(--slate-200); border-radius: 12px; background: var(--navy-900); box-shadow: 0 14px 28px rgba(16, 43, 67, .16); }
+    .campaign-artwork { width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; }
+    .campaign-artwork-wrap::after { content: "September campaign asset"; position: absolute; right: 10px; bottom: 10px; border-radius: 999px; background: rgba(9,30,49,.82); color: #fff; padding: 5px 9px; font-size: .65rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .campaign-details { padding: 8px 0; }
+    .campaign-details h2 { margin: 7px 0 0; color: var(--navy-900); font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.14; letter-spacing: -.035em; }
+    .campaign-details .campaign-copy { margin: 14px 0 0; color: var(--slate-600); font-size: .94rem; line-height: 1.65; }
+    .campaign-points { display: grid; gap: 10px; margin: 20px 0; padding: 0; list-style: none; }
+    .campaign-points li { display: flex; align-items: flex-start; gap: 9px; color: var(--slate-700); font-size: .86rem; }
+    .campaign-points svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--navy-600); }
+    .button-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .button { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 9px; padding: 11px 15px; font-size: .86rem; font-weight: 800; text-align: center; text-decoration: none; transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
+    .button:hover { transform: translateY(-1px); }
+    .button svg { width: 17px; height: 17px; }
+    .button-primary { background: var(--navy-800); color: #fff; }
+    .button-primary:hover { background: var(--navy-900); }
+    .button-secondary { border-color: var(--navy-100); background: #fff; color: var(--navy-800); }
+    .button-secondary:hover { border-color: #b9cede; background: var(--navy-50); }
+    .button-quiet { border-color: var(--slate-200); background: #fff; color: var(--slate-700); }
+    .button-quiet:hover { background: #f8fafc; }
+    .button[disabled] { cursor: not-allowed; transform: none; border-color: var(--slate-200); background: var(--slate-200); color: var(--slate-500); }
+
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(290px, .82fr); gap: 24px; align-items: start; margin-top: 28px; }
+    .quote-card { overflow: hidden; border-top: 7px solid var(--navy-800); }
+    .quote-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 22px 18px; border-bottom: 1px solid #eef2f6; }
+    .quote-card-top p { margin: 5px 0 0; color: var(--slate-500); font-size: .86rem; }
+    .public-only { flex: 0 0 auto; border: 1px solid var(--emerald-100); border-radius: 999px; background: var(--emerald-50); color: var(--emerald-800); padding: 5px 9px; font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .quote-body { display: grid; grid-template-columns: minmax(0, .94fr) minmax(265px, 1.06fr); gap: 22px; padding: 22px; }
+    .form-stack { display: grid; gap: 15px; }
+    .field-group { margin: 0; }
+    label { display: block; margin-bottom: 7px; color: var(--slate-700); font-size: .84rem; font-weight: 800; }
+    .required { color: var(--rose-700); }
+    .text-input { display: block; width: 100%; min-height: 47px; border: 1px solid var(--slate-300); border-radius: 9px; background: #fff; color: var(--slate-800); padding: 11px 12px; font-size: .95rem; transition: border-color .15s ease, box-shadow .15s ease; }
+    .text-input::placeholder { color: var(--slate-400); }
+    .text-input:focus { border-color: var(--navy-600); box-shadow: 0 0 0 4px var(--navy-100); outline: none; }
+    .text-input[aria-invalid="true"] { border-color: var(--rose-700); }
+    .field-error { min-height: 0; margin: 6px 0 0; color: var(--rose-700); font-size: .78rem; font-weight: 650; }
+    .date-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .date-fields .field-error { grid-column: 1 / -1; margin-top: -2px; }
+    .pricing-rule { border: 1px solid var(--slate-200); border-radius: 10px; background: var(--warm-50); padding: 13px; }
+    .pricing-rule .meta-label { color: var(--slate-500); }
+    .pricing-rule .rate { margin: 3px 0 0; color: var(--navy-900); font-size: 1.22rem; font-weight: 850; letter-spacing: -.025em; }
+    .pricing-rule .detail { margin: 3px 0 0; color: var(--slate-500); font-size: .78rem; }
+    .quote-action { width: 100%; margin-top: 3px; }
+
+    .quote-preview { border: 1px solid var(--slate-200); border-radius: 12px; background: var(--warm-50); padding: 17px; }
+    .quote-document-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .quote-document-head .property { margin: 2px 0 0; color: var(--navy-900); font-size: 1.02rem; font-weight: 850; letter-spacing: -.02em; }
+    .quote-document-head .operator { margin: 2px 0 0; color: var(--slate-500); font-size: .75rem; font-weight: 650; }
+    .quote-reference { margin: 0; color: var(--slate-500); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .64rem; font-weight: 700; text-align: right; }
+    .document-rule { height: 1px; margin: 14px 0; background: linear-gradient(90deg, #d9e3ea, transparent); }
+    .quote-waiting { display: grid; place-items: center; min-height: 202px; border: 1px dashed var(--slate-300); border-radius: 9px; background: rgba(255,255,255,.56); color: var(--slate-500); padding: 20px; text-align: center; font-size: .87rem; }
+    .quote-waiting svg { width: 26px; height: 26px; margin-bottom: 8px; color: var(--navy-500); }
+    .guest-row { padding: 0 0 12px; }
+    .guest-row .meta-label { color: var(--slate-400); }
+    .guest-value { margin: 3px 0 0; color: var(--navy-900); font-size: 1rem; font-weight: 850; }
+    .stay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .stay-item { border: 1px solid var(--slate-200); border-radius: 9px; background: #fff; padding: 10px; }
+    .stay-item .meta-label { color: var(--slate-400); font-size: .59rem; }
+    .stay-item p:last-child { margin: 3px 0 0; color: var(--navy-800); font-size: .8rem; font-weight: 800; }
+    .summary-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 9px; color: var(--navy-900); font-size: .82rem; font-weight: 850; }
+    .summary-title span { color: var(--slate-400); font-size: .59rem; letter-spacing: .14em; text-transform: uppercase; }
+    .summary-rows { display: grid; gap: 9px; }
+    .summary-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; color: var(--slate-600); font-size: .8rem; }
+    .summary-row strong { flex: 0 0 auto; color: var(--slate-800); font-size: .81rem; }
+    .summary-row.discount { color: var(--emerald-800); }
+    .summary-row.discount strong { color: var(--emerald-800); }
+    .summary-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 15px; border-top: 1px solid var(--slate-200); padding-top: 13px; color: var(--navy-800); font-size: .88rem; font-weight: 850; }
+    .summary-total strong { color: var(--navy-900); font-size: 1.3rem; letter-spacing: -.025em; }
+    .quote-note { margin: 13px 0 0; color: var(--slate-500); font-size: .71rem; line-height: 1.5; }
+
+    .side-stack { display: grid; gap: 20px; }
+    .resources-card, .activity-card { padding: 20px; }
+    .resources-card details { border-top: 1px solid var(--slate-200); }
+    .resources-card details:first-of-type { margin-top: 14px; }
+    .resources-card summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; list-style: none; padding: 14px 0; color: var(--navy-800); cursor: pointer; font-size: .86rem; font-weight: 800; }
+    .resources-card summary::-webkit-details-marker { display: none; }
+    .resources-card summary::after { content: "+"; color: var(--navy-600); font-size: 1.1rem; line-height: 1; }
+    .resources-card details[open] summary::after { content: "−"; }
+    .resource-content { margin: -3px 0 14px; color: var(--slate-600); font-size: .82rem; line-height: 1.62; }
+    .resource-content ul { margin: 8px 0 0; padding-left: 18px; }
+    .resource-content li + li { margin-top: 5px; }
+    .local-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: var(--navy-50); color: var(--navy-700); padding: 5px 8px; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .local-badge svg { width: 14px; height: 14px; }
+    .activity-list { display: grid; gap: 9px; margin: 15px 0 0; padding: 0; list-style: none; }
+    .activity-list li { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid #eef2f6; padding-bottom: 9px; color: var(--slate-700); font-size: .78rem; }
+    .activity-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+    .activity-list time { flex: 0 0 auto; color: var(--slate-400); font-size: .67rem; }
+    .empty-activity { margin: 15px 0 0; color: var(--slate-500); font-size: .8rem; }
+    .clear-button { min-height: 34px; margin-top: 15px; border: 0; background: transparent; color: var(--slate-500); padding: 0; font-size: .75rem; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+    .clear-button:hover { color: var(--navy-700); }
+
+    .page-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 30px; border-top: 1px solid var(--warm-200); padding: 19px 0 0; color: var(--slate-500); font-size: .74rem; }
+    .page-footer p { margin: 0; }
+    .page-footer a { color: var(--navy-700); font-weight: 800; text-decoration: none; }
+    .page-footer a:hover { text-decoration: underline; }
+    .toast { position: fixed; right: 16px; top: 16px; z-index: 20; max-width: min(360px, calc(100vw - 32px)); border-radius: 9px; background: var(--navy-900); color: #fff; padding: 12px 14px; box-shadow: 0 16px 34px rgba(9,30,49,.24); font-size: .84rem; font-weight: 750; }
+
+    @media (max-width: 860px) {
+      .hero, .campaign-grid, .main-grid, .quote-body { grid-template-columns: 1fr; }
+      .hero-panel { order: -1; }
+      .campaign-artwork { max-height: 650px; object-position: center; }
+    }
+    @media (max-width: 620px) {
+      .header-inner, .page { width: min(100% - 24px, 1184px); }
+      .header-inner { min-height: 64px; }
+      .brand-mark { width: 36px; height: 36px; }
+      .header-nav { display: none; }
+      .page { padding-top: 20px; }
+      .hero { gap: 16px; margin-bottom: 20px; }
+      .hero-copy { padding-top: 0; }
+      .hero-panel, .campaign-hub, .quote-card-top, .quote-body, .resources-card, .activity-card { padding: 16px; }
+      .hero-steps { grid-template-columns: 1fr; }
+      .campaign-hub { border-radius: 13px; }
+      .campaign-artwork { aspect-ratio: 2 / 3; }
+      .button-row, .hero-actions { display: grid; grid-template-columns: 1fr; }
+      .button { width: 100%; }
+      .quote-card-top { display: block; }
+      .public-only { display: inline-block; margin-top: 10px; }
+      .date-fields { grid-template-columns: 1fr; }
+      .stay-grid { grid-template-columns: 1fr 1fr; }
+      .page-footer { align-items: flex-start; flex-direction: column; gap: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#campaign-hub" aria-label="PTM Agent Lite home">
+        <img class="brand-mark" src="../icon-192.png" width="40" height="40" alt="PTM Exclusive" />
+        <span class="brand-copy"><span class="brand-title">Agent Lite</span><span class="brand-subtitle">PTM Exclusive</span></span>
+      </a>
+      <nav class="header-nav" aria-label="Primary navigation">
+        <a href="#campaign-hub">Campaign Hub</a>
+        <a href="#quick-enquiry">Quick Enquiry</a>
+        <a href="#resources">Resources</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow">PTM agent workspace · v0.1</p>
+        <h1 id="page-title">Campaign-ready, public-pricing enquiries.</h1>
+        <p class="lede">Share the current PTM campaign, prepare a simple stay enquiry, and keep a small private activity trail on this device—without a login or back-office controls.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#campaign-hub">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v13.5a2.5 2.5 0 0 1-2.5 2.5H4z"/><path d="M4 5.5V21l3.2-2 3.1 2 3.1-2 3.2 2V5.5"/></svg>
+            Open Campaign Hub
+          </a>
+          <a class="button button-secondary" href="#quick-enquiry">Prepare an enquiry</a>
+        </div>
+        <p class="trust-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8M12 8v8"/></svg>Public pricing only. No saved customer record, login, margin, override, or admin setting.</p>
+      </div>
+      <aside class="hero-panel" aria-label="How Agent Lite works">
+        <div>
+          <p class="section-kicker">Simple by design</p>
+          <p class="panel-title">A focused companion to the PTM Quote Engine.</p>
+          <p class="panel-copy">Use this app for agent-ready public campaign and enquiry work. The existing quotation workflow remains separate and unchanged.</p>
+        </div>
+        <div class="hero-steps" aria-label="Agent Lite workflow">
+          <div class="hero-step"><strong>1. Share</strong><span>Use the current campaign artwork.</span></div>
+          <div class="hero-step"><strong>2. Price</strong><span>Use approved public stay pricing.</span></div>
+          <div class="hero-step"><strong>3. Enquire</strong><span>Copy a clean availability request.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="campaign-hub" class="card campaign-hub" aria-labelledby="campaign-title">
+      <div class="section-heading">
+        <div><p class="section-kicker">Campaign Hub</p><h2 class="card-heading">September campaign</h2></div>
+        <p>Current ready-to-share asset</p>
+      </div>
+      <div class="campaign-grid">
+        <div class="campaign-artwork-wrap">
+          <img id="campaignArtwork" class="campaign-artwork" src="./assets/lombard-september-campaign.png" alt="PTM Exclusive September marketing campaign artwork" />
+        </div>
+        <div class="campaign-details">
+          <p class="section-kicker">PTM Exclusive</p>
+          <h2 id="campaign-title">Use the final September campaign artwork.</h2>
+          <p class="campaign-copy">The approved artwork is embedded in Agent Lite so it can be previewed, downloaded, and shared from the same lightweight workspace.</p>
+          <ul class="campaign-points">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Preview the final image before sending it on.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Download the exact campaign file for a channel that needs an attachment.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2"/></svg><span>Use Share Campaign for the phone-native sharing sheet when supported.</span></li>
+          </ul>
+          <div class="button-row">
+            <a id="downloadCampaign" class="button button-primary" href="./assets/lombard-september-campaign.png" download="PTM-September-Campaign.png">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+              Download Campaign
+            </a>
+            <button id="shareCampaign" class="button button-secondary" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2"/></svg>
+              Share Campaign
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <section id="quick-enquiry" class="card quote-card" aria-labelledby="enquiry-title">
+        <div class="quote-card-top">
+          <div><p class="section-kicker">Quick enquiry</p><h2 id="enquiry-title" class="card-heading">Prepare a public stay enquiry</h2><p>Complete Package uses the approved public rate and automatic length-of-stay pricing only.</p></div>
+          <span class="public-only">Public pricing only</span>
+        </div>
+        <div class="quote-body">
+          <form id="enquiryForm" class="form-stack" novalidate>
+            <div class="field-group">
+              <label for="guestName">Guest name <span class="required">*</span></label>
+              <input id="guestName" class="text-input" type="text" autocomplete="name" placeholder="e.g. Alex Moyo" aria-describedby="guestError" />
+              <p id="guestError" class="field-error" role="alert" hidden>Enter the guest's name to prepare the enquiry.</p>
+            </div>
+            <div class="date-fields">
+              <div class="field-group">
+                <label for="checkIn">Check-in <span class="required">*</span></label>
+                <input id="checkIn" class="text-input" type="date" aria-describedby="dateError" />
+              </div>
+              <div class="field-group">
+                <label for="checkOut">Check-out <span class="required">*</span></label>
+                <input id="checkOut" class="text-input" type="date" aria-describedby="dateError" />
+              </div>
+              <p id="dateError" class="field-error" role="alert" hidden>Choose a check-out date later than check-in.</p>
+            </div>
+            <div class="pricing-rule" aria-label="Approved public pricing">
+              <p class="meta-label">Complete Package</p>
+              <p class="rate">$70.00 <span aria-hidden="true">/</span><span style="font-size:.78rem; letter-spacing:0;">night</span></p>
+              <p class="detail">Automatic public discounts: 7+ nights 5% · 14+ nights 10% · 21+ nights 15% · 30+ nights 20%</p>
+            </div>
+            <button id="copyEnquiry" class="button button-primary quote-action" type="submit" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+              Copy quote / enquiry
+            </button>
+          </form>
+
+          <article class="quote-preview" aria-live="polite" aria-label="Public enquiry preview">
+            <div class="quote-document-head">
+              <div><p class="section-kicker">Cozy Up On 5th</p><p class="property">Accommodation enquiry</p><p class="operator">by PTM Exclusive</p></div>
+              <p id="quoteReference" class="quote-reference"></p>
+            </div>
+            <div class="document-rule"></div>
+            <div id="quoteWaiting" class="quote-waiting">
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg><div>Add valid stay dates to see the public pricing preview.</div></div>
+            </div>
+            <div id="quoteDetails" hidden>
+              <div id="previewGuestRow" class="guest-row" hidden><p class="meta-label">Guest</p><p id="previewGuest" class="guest-value"></p></div>
+              <div class="stay-grid">
+                <div class="stay-item"><p class="meta-label">Check-in</p><p id="previewCheckIn">—</p></div>
+                <div class="stay-item"><p class="meta-label">Check-out</p><p id="previewCheckOut">—</p></div>
+                <div class="stay-item"><p class="meta-label">Duration</p><p id="previewNights">—</p></div>
+                <div class="stay-item"><p class="meta-label">Package</p><p>Complete Package</p></div>
+              </div>
+              <div class="summary-title"><span>Pricing summary</span><span>Amount</span></div>
+              <div class="summary-rows">
+                <div class="summary-row"><span id="previewGrossLabel">Accommodation</span><strong id="previewGross">—</strong></div>
+                <div id="previewDiscountRow" class="summary-row discount" hidden><span id="previewDiscountLabel">Discount</span><strong id="previewDiscount">—</strong></div>
+              </div>
+              <div class="summary-total"><span>Estimated accommodation total</span><strong id="previewTotal">—</strong></div>
+              <p class="quote-note">Public pricing estimate only. Availability remains subject to confirmation.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="side-stack">
+        <section id="resources" class="card resources-card" aria-labelledby="resources-title">
+          <p class="section-kicker">Resources</p><h2 id="resources-title" class="card-heading">The public essentials</h2>
+          <details data-resource="Campaign sharing guide">
+            <summary>Campaign sharing guide</summary>
+            <div class="resource-content">Use the embedded final image so the same campaign version travels across agent channels. Check the artwork before sharing and use the Download Campaign button when the channel needs a file attachment.</div>
+          </details>
+          <details data-resource="Public pricing guide">
+            <summary>Public pricing guide</summary>
+            <div class="resource-content">Complete Package begins at $70.00 per night. The system applies one highest eligible stay discount only:
+              <ul><li>7 nights: 5%</li><li>14 nights: 10%</li><li>21 nights: 15%</li><li>30 nights: 20%</li></ul>
+            </div>
+          </details>
+          <details data-resource="Enquiry checklist">
+            <summary>Enquiry checklist</summary>
+            <div class="resource-content">Confirm the guest name, check-in and check-out dates, then copy the completed enquiry. The copied message states the public estimate and asks for availability confirmation.</div>
+          </details>
+        </section>
+
+        <section class="card activity-card" aria-labelledby="activity-title">
+          <div class="section-heading" style="margin-bottom:0;">
+            <div><p class="section-kicker">Local Activity</p><h2 id="activity-title" class="card-heading">This device only</h2></div>
+            <span class="local-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="2"/></svg>Local</span>
+          </div>
+          <p id="emptyActivity" class="empty-activity">Campaign and enquiry actions will appear here on this browser only.</p>
+          <ol id="activityList" class="activity-list" hidden></ol>
+          <button id="clearActivity" class="clear-button" type="button" hidden>Clear local activity</button>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="page-footer">
+      <p>PTM Agent Lite v0.1 · Static, local-first workspace · Authentication follows UX sign-off.</p>
+      <a href="../">Open PTM Quote Engine</a>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const CONFIG = Object.freeze({
+        operatorName: 'PTM Exclusive',
+        propertyName: 'Cozy Up On 5th',
+        currencySymbol: '$',
+        product: Object.freeze({
+          name: 'Complete Package',
+          nightlyRateCents: 7000,
+          discounts: Object.freeze([
+            Object.freeze({ minimumNights: 30, percentage: 20, label: 'Monthly Stay Discount' }),
+            Object.freeze({ minimumNights: 21, percentage: 15, label: 'Three-Week Stay Discount' }),
+            Object.freeze({ minimumNights: 14, percentage: 10, label: 'Fortnight Stay Discount' }),
+            Object.freeze({ minimumNights: 7, percentage: 5, label: 'Weekly Stay Discount' })
+          ])
+        }),
+        campaign: Object.freeze({
+          title: 'PTM Exclusive September Campaign',
+          artwork: './assets/lombard-september-campaign.png',
+          filename: 'PTM-September-Campaign.png'
+        })
+      });
+
+      const ACTIVITY_KEY = 'ptm-agent-lite:v0.1:activity';
+      const SESSION_KEY = 'ptm-agent-lite:v0.1:session-opened';
+      const elements = {
+        form: document.querySelector('#enquiryForm'),
+        guestName: document.querySelector('#guestName'),
+        checkIn: document.querySelector('#checkIn'),
+        checkOut: document.querySelector('#checkOut'),
+        guestError: document.querySelector('#guestError'),
+        dateError: document.querySelector('#dateError'),
+        copyEnquiry: document.querySelector('#copyEnquiry'),
+        quoteReference: document.querySelector('#quoteReference'),
+        quoteWaiting: document.querySelector('#quoteWaiting'),
+        quoteDetails: document.querySelector('#quoteDetails'),
+        previewGuestRow: document.querySelector('#previewGuestRow'),
+        previewGuest: document.querySelector('#previewGuest'),
+        previewCheckIn: document.querySelector('#previewCheckIn'),
+        previewCheckOut: document.querySelector('#previewCheckOut'),
+        previewNights: document.querySelector('#previewNights'),
+        previewGrossLabel: document.querySelector('#previewGrossLabel'),
+        previewGross: document.querySelector('#previewGross'),
+        previewDiscountRow: document.querySelector('#previewDiscountRow'),
+        previewDiscountLabel: document.querySelector('#previewDiscountLabel'),
+        previewDiscount: document.querySelector('#previewDiscount'),
+        previewTotal: document.querySelector('#previewTotal'),
+        downloadCampaign: document.querySelector('#downloadCampaign'),
+        shareCampaign: document.querySelector('#shareCampaign'),
+        activityList: document.querySelector('#activityList'),
+        emptyActivity: document.querySelector('#emptyActivity'),
+        clearActivity: document.querySelector('#clearActivity'),
+        toast: document.querySelector('#toast')
+      };
+
+      const state = {
+        guestTouched: false,
+        datesTouched: false,
+        outputAttempted: false,
+        reference: createReference(),
+        quote: null,
+        toastTimer: null
+      };
+
+      function createReference() {
+        const now = new Date();
+        const ymd = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('');
+        let token = '0000';
+        if (window.crypto && window.crypto.getRandomValues) {
+          const values = new Uint32Array(1);
+          window.crypto.getRandomValues(values);
+          token = values[0].toString(36).toUpperCase().slice(-4).padStart(4, '0');
+        }
+        return `PTM-AL-${ymd}-${token}`;
+      }
+
+      function moneyFromCents(cents) {
+        return `${CONFIG.currencySymbol}${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
+      function parseDate(value) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
+        const [year, month, day] = value.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null;
+      }
+
+      function calculateNights(checkIn, checkOut) {
+        const start = parseDate(checkIn);
+        const end = parseDate(checkOut);
+        if (!start || !end) return null;
+        const nights = Math.round((end.getTime() - start.getTime()) / 86400000);
+        return nights > 0 ? nights : null;
+      }
+
+      function formatDate(value) {
+        const date = parseDate(value);
+        return date ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date) : '—';
+      }
+
+      function resolveAutomaticDiscount(nights) {
+        return CONFIG.product.discounts.find((tier) => nights >= tier.minimumNights) || null;
+      }
+
+      function buildQuote({ guestName, checkIn, checkOut }) {
+        const nights = calculateNights(checkIn, checkOut);
+        if (!nights) return null;
+        const grossCents = nights * CONFIG.product.nightlyRateCents;
+        const discountTier = resolveAutomaticDiscount(nights);
+        const discountCents = discountTier ? Math.round(grossCents * discountTier.percentage / 100) : 0;
+        return Object.freeze({
+          guestName: (guestName || '').trim(),
+          checkIn,
+          checkOut,
+          nights,
+          rateCents: CONFIG.product.nightlyRateCents,
+          grossCents,
+          discountTier,
+          discountCents,
+          totalCents: grossCents - discountCents
+        });
+      }
+
+      function isCompleteQuote(quote) {
+        return Boolean(quote && quote.guestName && quote.nights > 0 && quote.totalCents > 0);
+      }
+
+      function getFormValues() {
+        return { guestName: elements.guestName.value, checkIn: elements.checkIn.value, checkOut: elements.checkOut.value };
+      }
+
+      function setVisible(element, visible) {
+        element.hidden = !visible;
+      }
+
+      function renderValidation() {
+        const values = getFormValues();
+        const guestMissing = !values.guestName.trim();
+        const datesValid = Boolean(calculateNights(values.checkIn, values.checkOut));
+        const showGuestError = guestMissing && (state.guestTouched || state.outputAttempted);
+        const showDateError = !datesValid && (state.datesTouched || state.outputAttempted);
+        elements.guestName.setAttribute('aria-invalid', String(showGuestError));
+        elements.checkIn.setAttribute('aria-invalid', String(showDateError));
+        elements.checkOut.setAttribute('aria-invalid', String(showDateError));
+        setVisible(elements.guestError, showGuestError);
+        setVisible(elements.dateError, showDateError);
+      }
+
+      function renderQuote() {
+        const values = getFormValues();
+        const quote = buildQuote(values);
+        state.quote = quote;
+        elements.quoteReference.textContent = state.reference;
+        const guest = values.guestName.trim();
+        const ready = Boolean(quote);
+        setVisible(elements.quoteWaiting, !ready);
+        setVisible(elements.quoteDetails, ready);
+        setVisible(elements.previewGuestRow, Boolean(guest));
+        if (guest) elements.previewGuest.textContent = guest;
+        if (quote) {
+          elements.previewCheckIn.textContent = formatDate(quote.checkIn);
+          elements.previewCheckOut.textContent = formatDate(quote.checkOut);
+          elements.previewNights.textContent = `${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'}`;
+          elements.previewGrossLabel.textContent = `${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'} × ${moneyFromCents(quote.rateCents)}`;
+          elements.previewGross.textContent = moneyFromCents(quote.grossCents);
+          const hasDiscount = Boolean(quote.discountTier && quote.discountCents > 0);
+          setVisible(elements.previewDiscountRow, hasDiscount);
+          if (hasDiscount) {
+            elements.previewDiscountLabel.textContent = `${quote.discountTier.label} (${quote.discountTier.percentage}%)`;
+            elements.previewDiscount.textContent = `−${moneyFromCents(quote.discountCents)}`;
+          }
+          elements.previewTotal.textContent = moneyFromCents(quote.totalCents);
+        }
+        elements.copyEnquiry.disabled = !isCompleteQuote(quote);
+        renderValidation();
+      }
+
+      function buildEnquiryMessage(quote) {
+        const lines = [
+          `*${CONFIG.propertyName.toUpperCase()}*`,
+          `_by ${CONFIG.operatorName}_`,
+          '*ACCOMMODATION ENQUIRY*',
+          `Reference: ${state.reference}`,
+          '',
+          `*Guest:* ${quote.guestName}`,
+          `*Check-in:* ${formatDate(quote.checkIn)}`,
+          `*Check-out:* ${formatDate(quote.checkOut)}`,
+          `*Duration:* ${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'}`,
+          '*Package:* Complete Package',
+          '--------------------------------',
+          `Nightly Rate: ${moneyFromCents(quote.rateCents)}`,
+          `Accommodation Subtotal: ${moneyFromCents(quote.grossCents)}`
+        ];
+        if (quote.discountTier && quote.discountCents > 0) {
+          lines.push(`${quote.discountTier.label} (${quote.discountTier.percentage}%): -${moneyFromCents(quote.discountCents)}`);
+        }
+        lines.push(
+          `*Estimated Accommodation Total: ${moneyFromCents(quote.totalCents)}*`,
+          '--------------------------------',
+          'Please confirm availability for these dates.'
+        );
+        return lines.join('\n');
+      }
+
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const helper = document.createElement('textarea');
+        helper.value = text;
+        helper.setAttribute('readonly', '');
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.select();
+        const copied = document.execCommand('copy');
+        helper.remove();
+        if (!copied) throw new Error('Clipboard unavailable');
+      }
+
+      function showToast(message) {
+        clearTimeout(state.toastTimer);
+        elements.toast.textContent = message;
+        elements.toast.hidden = false;
+        state.toastTimer = setTimeout(() => { elements.toast.hidden = true; }, 3600);
+      }
+
+      function loadActivity() {
+        try {
+          const records = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]');
+          return Array.isArray(records) ? records.filter((entry) => entry && typeof entry.label === 'string' && typeof entry.at === 'string').slice(0, 20) : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveActivity(records) {
+        try { localStorage.setItem(ACTIVITY_KEY, JSON.stringify(records)); } catch (_) { /* Device storage is optional. */ }
+      }
+
+      function formatActivityTime(isoDate) {
+        const date = new Date(isoDate);
+        return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date);
+      }
+
+      function renderActivity() {
+        const records = loadActivity();
+        setVisible(elements.emptyActivity, records.length === 0);
+        setVisible(elements.activityList, records.length > 0);
+        setVisible(elements.clearActivity, records.length > 0);
+        elements.activityList.replaceChildren();
+        records.slice(0, 6).forEach((record) => {
+          const item = document.createElement('li');
+          const label = document.createElement('span');
+          const time = document.createElement('time');
+          label.textContent = record.label;
+          time.dateTime = record.at;
+          time.textContent = formatActivityTime(record.at);
+          item.append(label, time);
+          elements.activityList.append(item);
+        });
+      }
+
+      function recordActivity(label) {
+        const records = loadActivity();
+        records.unshift({ label, at: new Date().toISOString() });
+        saveActivity(records.slice(0, 20));
+        renderActivity();
+      }
+
+      async function shareCampaign() {
+        const url = new URL(CONFIG.campaign.artwork, window.location.href);
+        const text = 'PTM Exclusive September campaign artwork.';
+        try {
+          let shared = false;
+          if (navigator.share) {
+            try {
+              const response = await fetch(url.href);
+              if (response.ok) {
+                const file = new File([await response.blob()], CONFIG.campaign.filename, { type: 'image/png' });
+                const data = { title: CONFIG.campaign.title, text, files: [file] };
+                if (!navigator.canShare || navigator.canShare(data)) {
+                  await navigator.share(data);
+                  shared = true;
+                }
+              }
+            } catch (error) {
+              if (error && error.name === 'AbortError') return;
+            }
+            if (!shared) {
+              await navigator.share({ title: CONFIG.campaign.title, text, url: window.location.href });
+              shared = true;
+            }
+          }
+          if (shared) {
+            recordActivity('September campaign shared');
+            showToast('Campaign sharing opened.');
+          } else {
+            await copyText(`${text}\n${window.location.href}`);
+            recordActivity('Campaign sharing text copied');
+            showToast('Campaign link copied for sharing.');
+          }
+        } catch (error) {
+          if (error && error.name === 'AbortError') return;
+          try {
+            await copyText(`${text}\n${window.location.href}`);
+            recordActivity('Campaign sharing text copied');
+            showToast('Campaign link copied for sharing.');
+          } catch (_) {
+            showToast('Sharing is not available in this browser.');
+          }
+        }
+      }
+
+      elements.guestName.addEventListener('input', renderQuote);
+      elements.checkIn.addEventListener('input', renderQuote);
+      elements.checkOut.addEventListener('input', renderQuote);
+      elements.guestName.addEventListener('blur', () => { state.guestTouched = true; renderValidation(); });
+      [elements.checkIn, elements.checkOut].forEach((input) => input.addEventListener('blur', () => { state.datesTouched = true; renderValidation(); }));
+      elements.form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        state.outputAttempted = true;
+        renderQuote();
+        if (!isCompleteQuote(state.quote)) {
+          const invalid = !elements.guestName.value.trim() ? elements.guestName : elements.checkIn;
+          invalid.focus();
+          return;
+        }
+        try {
+          await copyText(buildEnquiryMessage(state.quote));
+          recordActivity('Public quote / enquiry copied');
+          showToast('Quote / enquiry copied.');
+        } catch (_) {
+          showToast('Could not copy the enquiry in this browser.');
+        }
+      });
+      elements.downloadCampaign.addEventListener('click', () => {
+        recordActivity('September campaign downloaded');
+        showToast('Campaign download started.');
+      });
+      elements.shareCampaign.addEventListener('click', shareCampaign);
+      document.querySelectorAll('[data-resource]').forEach((detail) => detail.addEventListener('toggle', () => {
+        if (detail.open) recordActivity(`${detail.dataset.resource} opened`);
+      }));
+      elements.clearActivity.addEventListener('click', () => {
+        try { localStorage.removeItem(ACTIVITY_KEY); } catch (_) { /* No-op when storage is blocked. */ }
+        renderActivity();
+        showToast('Local activity cleared.');
+      });
+
+      renderQuote();
+      renderActivity();
+      try {
+        if (!sessionStorage.getItem(SESSION_KEY)) {
+          recordActivity('Campaign Hub opened');
+          sessionStorage.setItem(SESSION_KEY, 'true');
+        }
+      } catch (_) { /* Activity remains optional when session storage is blocked. */ }
+
+      if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(() => {}));
+      }
+
+      window.PTMAgentLite = Object.freeze({ CONFIG, calculateNights, resolveAutomaticDiscount, buildQuote });
+    })();
+  </script>
+</body>
+</html>
