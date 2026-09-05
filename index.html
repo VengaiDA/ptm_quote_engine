@@ -52,16 +52,22 @@
       box-shadow: 0 10px 26px rgba(16, 43, 67, 0.06);
     }
     #paymentToolsPanel { padding: 1rem; }
-    #ecocashUssdPreview { scrollbar-width: thin; }
-
     @media (min-width: 1024px) {
-      .quote-workspace > aside { display: contents; }
-      .quote-workspace > aside > .no-print {
-        grid-column: 1 / -1;
-        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      .quote-workspace > aside {
+        display: block;
+        grid-column: 2 / 3;
+        grid-row: 1;
       }
-      #paymentToolsPanel {
-        grid-column: 2 / 3 !important;
+      #paymentToolsPanel { margin-top: 1rem; }
+      #quoteActions {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.9rem;
+        background: #ffffff;
+        padding: 0.75rem;
+        box-shadow: 0 10px 26px rgba(16, 43, 67, 0.06);
         margin-top: 0;
       }
     }
@@ -148,7 +154,8 @@
       ecocashAgent: {
         name: 'Natmed',
         code: '029327',
-        ussdPrefix: '*153*3*1*'
+        ussdPrefix: '*153*3*1*',
+        maxTransactionAmount: 500
       }
     };
 
@@ -162,6 +169,7 @@
     };
     let quoteReference = '';
     let lastQuote = null;
+    let currentPaymentPlan = null;
     let toastTimer;
     let guestNameTouched = false;
     let outputActionAttempted = false;
@@ -433,7 +441,7 @@
         ? 'Includes accommodation charges and refundable security deposit.'
         : 'Includes applicable accommodation charges.';
       $('previewValidity').textContent = `Quotation valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`;
-      updatePaymentTools(quote.amountRequired);
+      updatePaymentControl(quote, validation);
 
       const validActions = validation.isValid;
       ['whatsappButton', 'emailButton', 'printButton'].forEach((id) => {
@@ -540,34 +548,104 @@
       }
     }
 
-    function normaliseUssdAmount(value) {
+    function amountToMinorUnits(value) {
       const amount = Number(value);
-      if (!Number.isFinite(amount) || amount <= 0) return '';
-      return String(roundMoney(amount));
+      return Number.isFinite(amount) && amount > 0 ? Math.round((amount + Number.EPSILON) * 100) : 0;
     }
 
-    function buildEcocashUssd(value) {
-      const amount = normaliseUssdAmount(value);
-      if (!amount) return '';
+    function minorUnitsToAmount(minorUnits) {
+      return minorUnits / 100;
+    }
+
+    function formatPaymentAmount(minorUnits) {
+      if (!Number.isSafeInteger(minorUnits) || minorUnits <= 0) return '—';
+      const whole = Math.floor(minorUnits / 100);
+      const fraction = minorUnits % 100;
+      return `${CONFIG.currencySymbol}${whole}${fraction ? `.${String(fraction).padStart(2, '0')}` : ''}`;
+    }
+
+    function minorUnitsToUssdAmount(minorUnits) {
+      if (!Number.isSafeInteger(minorUnits) || minorUnits <= 0) return '';
+      const whole = Math.floor(minorUnits / 100);
+      const fraction = minorUnits % 100;
+      return `${whole}${fraction ? `.${String(fraction).padStart(2, '0')}` : ''}`;
+    }
+
+    function buildEcocashUssd(minorUnits) {
+      const amount = minorUnitsToUssdAmount(minorUnits);
+      if (!amount || !CONFIG.ecocashAgent.code || !CONFIG.ecocashAgent.ussdPrefix) return '';
       return `${CONFIG.ecocashAgent.ussdPrefix}${CONFIG.ecocashAgent.code}*${amount}#`;
     }
 
-    function updatePaymentTools(value = null) {
-      const amountInput = $('paymentAmount');
-      const preview = $('ecocashUssdPreview');
-      const copyButton = $('copyUssdButton');
-      if (!amountInput || !preview || !copyButton) return;
+    function buildPaymentPlan(amountRequired) {
+      const totalCents = amountToMinorUnits(amountRequired);
+      const maxTransactionCents = amountToMinorUnits(CONFIG.ecocashAgent.maxTransactionAmount);
+      const emptyPlan = {
+        total: 0, totalCents: 0, maxTransactionCents, transactionCount: 0,
+        transactions: [], mode: 'invalid', isBalanced: false, isReady: false
+      };
+      if (!totalCents || !maxTransactionCents) return emptyPlan;
 
-      if (value !== null && document.activeElement !== amountInput) {
-        amountInput.value = normaliseUssdAmount(value);
+      const transactions = [];
+      let remainingCents = totalCents;
+      while (remainingCents > 0) {
+        const amountCents = Math.min(remainingCents, maxTransactionCents);
+        transactions.push({
+          amount: minorUnitsToAmount(amountCents),
+          amountCents,
+          ussd: buildEcocashUssd(amountCents)
+        });
+        remainingCents -= amountCents;
       }
 
-      const code = buildEcocashUssd(amountInput.value);
-      preview.textContent = code || `${CONFIG.ecocashAgent.ussdPrefix}${CONFIG.ecocashAgent.code}*amount#`;
-      copyButton.disabled = !code;
+      const plannedCents = transactions.reduce((total, transaction) => total + transaction.amountCents, 0);
+      const isBalanced = plannedCents === totalCents;
+      return {
+        total: minorUnitsToAmount(totalCents), totalCents, maxTransactionCents,
+        transactionCount: transactions.length, transactions,
+        mode: transactions.length === 1 ? 'single' : 'split',
+        isBalanced,
+        isReady: isBalanced && transactions.every((transaction) => Boolean(transaction.ussd))
+      };
     }
 
-    function initialisePaymentTools() {
+    function buildPaymentInstructions(plan) {
+      return [
+        `Please pay ${formatPaymentAmount(plan.totalCents)} via EcoCash Agent Cash-Out.`,
+        `Agent: ${CONFIG.ecocashAgent.name}`,
+        `Agent Code: ${CONFIG.ecocashAgent.code}`,
+        `Payment instruction limit: ${formatPaymentAmount(plan.maxTransactionCents)} per transaction.`,
+        'Please complete the following transactions:',
+        ...plan.transactions.flatMap((transaction, index) => [
+          `${index + 1}. ${formatPaymentAmount(transaction.amountCents)}`,
+          transaction.ussd
+        ]),
+        `Total payment: ${formatPaymentAmount(plan.totalCents)}`,
+        'Please ensure all transactions are completed.'
+      ].join('\n');
+    }
+
+    function updatePaymentControl(quote, validation) {
+      const amountDisplay = $('paymentAmount');
+      const summary = $('paymentPlanSummary');
+      const copyButton = $('paymentCopyButton');
+      const copyLabel = $('paymentCopyLabel');
+      if (!amountDisplay || !summary || !copyButton || !copyLabel) return;
+
+      currentPaymentPlan = buildPaymentPlan(quote?.amountRequired);
+      const canCopy = Boolean(validation?.isValid && currentPaymentPlan.isReady);
+      amountDisplay.textContent = canCopy ? formatPaymentAmount(currentPaymentPlan.totalCents) : '—';
+      summary.textContent = !canCopy
+        ? 'Complete a valid quotation to prepare payment instructions.'
+        : currentPaymentPlan.mode === 'single'
+          ? 'Single transaction'
+          : `${currentPaymentPlan.transactionCount} transactions required · auto-split`;
+      copyLabel.textContent = currentPaymentPlan.mode === 'split' ? 'Copy payment instructions' : 'Copy USSD';
+      copyButton.disabled = !canCopy;
+      copyButton.setAttribute('aria-label', copyLabel.textContent);
+    }
+
+    function initialisePaymentControl() {
       const panel = document.createElement('section');
       panel.id = 'paymentToolsPanel';
       panel.className = 'no-print mt-4';
@@ -577,34 +655,34 @@
           <div class="min-w-0">
             <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Internal payment tool</p>
             <div class="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h3 id="payment-tools-title" class="text-sm font-bold text-navy-900">EcoCash USSD</h3>
+              <h3 id="payment-tools-title" class="text-sm font-bold text-navy-900">EcoCash</h3>
               <span id="ecocashAgentDetails" class="text-xs font-medium text-slate-500"></span>
+              <button id="copyAgentCodeButton" type="button" aria-label="Copy EcoCash agent code" title="Copy agent code" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-navy-50 hover:text-navy-800 focus:outline-none focus:ring-4 focus:ring-navy-100">
+                <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
+              </button>
             </div>
           </div>
-          <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Auto-filled from quote</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Quote-derived</span>
         </div>
-        <div class="grid gap-2 sm:grid-cols-[7.5rem_minmax(0,1fr)_auto] sm:items-end">
-          <div class="min-w-0">
-            <label for="paymentAmount" class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500">Amount</label>
-            <div class="relative">
-              <span class="money-prefix absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">${CONFIG.currencySymbol}</span>
-              <input id="paymentAmount" type="number" min="0" step="0.01" inputmode="decimal" aria-describedby="paymentToolsHint" class="block min-h-11 w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-7 pr-2.5 text-sm font-bold text-navy-900 outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100">
-            </div>
+        <div class="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-slate-200 bg-warm-50 px-3.5 py-3">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Payment amount</p>
+            <output id="paymentAmount" aria-describedby="paymentToolsHint" class="mt-1 block text-xl font-bold tracking-tight text-navy-900">—</output>
+            <p id="paymentPlanSummary" class="mt-1 text-xs font-semibold text-slate-500" aria-live="polite"></p>
           </div>
-          <div class="min-w-0">
-            <p class="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">USSD code</p>
-            <div class="flex min-h-11 items-center overflow-hidden rounded-lg border border-slate-200 bg-warm-50 px-3">
-              <code id="ecocashUssdPreview" class="block w-full overflow-x-auto whitespace-nowrap font-mono text-sm font-bold text-navy-800"></code>
-            </div>
-          </div>
-          <button id="copyUssdButton" type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-900 focus:outline-none focus:ring-4 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-slate-300">
-            <i data-lucide="copy" class="h-4 w-4" aria-hidden="true"></i> Copy USSD
+          <button id="paymentCopyButton" type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-900 focus:outline-none focus:ring-4 focus:ring-navy-200 disabled:cursor-not-allowed disabled:bg-slate-300">
+            <i data-lucide="copy" class="h-4 w-4" aria-hidden="true"></i><span id="paymentCopyLabel">Copy USSD</span>
           </button>
         </div>
-        <p id="paymentToolsHint" class="sr-only">The amount defaults to the quotation amount required and may be edited. Copy USSD copies only the raw short code.</p>`;
+        <p id="paymentToolsHint" class="sr-only">Payment amount is derived from Amount Required. For split payments, one copy action includes every required transaction.</p>`;
       $('quotePreview').insertAdjacentElement('afterend', panel);
       $('ecocashAgentDetails').textContent = `${CONFIG.ecocashAgent.name} · Agent ${CONFIG.ecocashAgent.code}`;
-      updatePaymentTools();
+      const actionBar = panel.nextElementSibling;
+      if (actionBar && actionBar.classList.contains('no-print')) {
+        actionBar.id = 'quoteActions';
+        document.querySelector('.quote-workspace').appendChild(actionBar);
+      }
+      updatePaymentControl(null, { isValid: false });
     }
 
     function resetQuote() {
@@ -648,7 +726,7 @@
     function initialise() {
       document.querySelectorAll('.currency-symbol').forEach((element) => { element.textContent = CONFIG.currencySymbol; });
       initialiseProductTypeControl();
-      initialisePaymentTools();
+      initialisePaymentControl();
       fields.guestName.addEventListener('input', () => { guestNameTouched = true; });
       fields.guestName.addEventListener('blur', () => { guestNameTouched = true; updateQuote(); });
       fields.productType.addEventListener('change', () => {
@@ -666,14 +744,25 @@
       $('emailButton').addEventListener('click', () => {
         if (prepareOutputAction()) copyToClipboard(buildEmailMessage(lastQuote), '✓ Email quotation copied');
       });
-      $('paymentAmount').addEventListener('input', () => updatePaymentTools());
-      $('copyUssdButton').addEventListener('click', () => {
-        const code = buildEcocashUssd($('paymentAmount').value);
-        if (!code) {
-          showToast('Enter a payment amount first.', true);
+      $('copyAgentCodeButton').addEventListener('click', () => {
+        const agentCode = CONFIG.ecocashAgent.code;
+        if (!agentCode) {
+          showToast('EcoCash agent code is unavailable.', true);
           return;
         }
-        copyToClipboard(code, '✓ USSD code copied');
+        copyToClipboard(agentCode, '✓ Agent code copied');
+      });
+      $('paymentCopyButton').addEventListener('click', () => {
+        const validation = updateQuote();
+        const plan = currentPaymentPlan;
+        if (!validation.isValid || !plan || !plan.isReady || !plan.isBalanced) {
+          showToast('Complete a valid quotation before copying payment instructions.', true);
+          return;
+        }
+        const clipboardText = plan.mode === 'single'
+          ? plan.transactions[0].ussd
+          : buildPaymentInstructions(plan);
+        copyToClipboard(clipboardText, plan.mode === 'single' ? '✓ USSD code copied' : '✓ Payment instructions copied');
       });
       $('printButton').addEventListener('click', () => {
         if (prepareOutputAction()) window.print();
