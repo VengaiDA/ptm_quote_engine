@@ -34,8 +34,6 @@
     .field-error { display: none; }
     .has-error .field-error { display: block; }
     .has-error input, .has-error select { border-color: #dc2626; }
-    #guestField.has-error:not(.guest-show-error) .field-error { display: none; }
-    #guestField.has-error:not(.guest-show-error) input { border-color: #cbd5e1; }
     .output-action-unavailable { cursor: not-allowed; opacity: 0.55; }
     #quotePreview [hidden] { display: none !important; }
     #previewGuest:not([data-has-guest="true"]) { display: none; }
@@ -43,6 +41,10 @@
     .toggle-panel[hidden], .conditional-field[hidden] { display: none; }
     .money-prefix { pointer-events: none; }
     .document-rule { height: 1px; background: linear-gradient(90deg, #d9e3ea, transparent); }
+    .quote-terms { margin-top: 1.25rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+    .quote-terms-list { display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); gap: .55rem .9rem; margin-top: .7rem; }
+    .quote-terms-list dt { color: #64748b; font-size: .7rem; font-weight: 700; }
+    .quote-terms-list dd { margin: 0; color: #334155; font-size: .72rem; line-height: 1.45; }
     #quotePreview .document-rule + div > p { display: none; }
     .quote-workspace > aside > .no-print {
       border: 1px solid #e2e8f0;
@@ -107,7 +109,7 @@
       <section class="no-print rounded-2xl border border-slate-200 bg-white p-4 shadow-soft sm:p-6" aria-labelledby="quote-inputs-title">
         <div class="mb-5 border-b border-slate-100 pb-5"><h2 id="quote-inputs-title" class="text-lg font-bold text-navy-900">Quote Inputs</h2><p class="mt-1 text-sm text-slate-500">Enter the stay details for the quotation.</p></div>
         <form id="quoteForm" novalidate class="space-y-4">
-          <fieldset class="rounded-xl border border-slate-200 bg-warm-50 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Guest</legend><div id="guestField" class="has-error"><label for="guestName" class="mb-1.5 block text-sm font-semibold text-slate-700">Guest name <span class="text-red-600">*</span></label><input id="guestName" name="guestName" type="text" autocomplete="name" required placeholder="e.g. Paul Muponda" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition placeholder:text-slate-400 focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="guestError" /><p id="guestError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Enter the guest's name.</p></div></fieldset>
+          <fieldset class="rounded-xl border border-slate-200 bg-warm-50 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Guest</legend><div id="guestField"><label for="guestName" class="mb-1.5 block text-sm font-semibold text-slate-700">Guest name <span class="text-red-600">*</span></label><input id="guestName" name="guestName" type="text" autocomplete="name" required placeholder="e.g. Paul Muponda" class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-base outline-none transition placeholder:text-slate-400 focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="guestError" /><p id="guestError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Guest name is required.</p></div></fieldset>
 
           <fieldset class="rounded-xl border border-slate-200 p-4"><legend class="px-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Stay</legend><div class="grid gap-3 sm:grid-cols-2"><div id="checkInField"><label for="checkIn" class="mb-1.5 block text-sm font-semibold text-slate-700">Check-in <span class="text-red-600">*</span></label><input id="checkIn" name="checkIn" type="date" required class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="checkInError dateError" /><p id="checkInError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Choose a valid check-in date.</p></div><div id="checkOutField"><label for="checkOut" class="mb-1.5 block text-sm font-semibold text-slate-700">Check-out <span class="text-red-600">*</span></label><input id="checkOut" name="checkOut" type="date" required class="block min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base outline-none transition focus:border-navy-600 focus:ring-4 focus:ring-navy-100" aria-describedby="checkOutError dateError" /><p id="checkOutError" class="field-error mt-1.5 text-sm text-red-600" role="alert">Choose a valid check-out date.</p></div></div><p id="dateError" class="mt-2 hidden text-sm font-medium text-red-600" role="alert">Check-out must be later than check-in.</p><div class="mt-4 flex items-center justify-between rounded-lg bg-navy-50 px-3.5 py-2.5"><span class="text-xs font-semibold uppercase tracking-wide text-navy-600">Duration</span><p id="durationHint" class="text-sm font-bold text-navy-800" aria-live="polite"></p></div></fieldset>
 
@@ -151,6 +153,13 @@
       defaultSecurityDeposit: 0,
       paymentOptionsText: 'Cash and EcoCash payments are available.',
       quoteValidityHours: 24,
+      directBookingTerms: {
+        checkInTime: '14:00 (2:00 PM)',
+        checkOutTime: '10:00 AM',
+        cancellationPolicy: 'Free cancellation up to 48 hours before check-in.',
+        bookingConfirmationText: 'A quotation does not secure the selected dates. Your reservation is confirmed once the required payment has been received. Until payment is received, dates remain subject to availability.',
+        footerText: 'Thank you for choosing PTM Exclusive.'
+      },
       ecocashAgent: {
         name: 'Natmed',
         code: '029327',
@@ -391,6 +400,41 @@
       if (preparedBy) preparedBy.textContent = CONFIG.operatorName;
     }
 
+    function renderDirectBookingTerms() {
+      let termsSection = $('previewTerms');
+      if (!termsSection) {
+        termsSection = document.createElement('section');
+        termsSection.id = 'previewTerms';
+        termsSection.className = 'quote-terms';
+        const title = document.createElement('h3');
+        title.className = 'text-xs font-bold uppercase tracking-[0.16em] text-slate-500';
+        title.textContent = 'Terms & Conditions';
+        const list = document.createElement('dl');
+        list.id = 'previewTermsList';
+        list.className = 'quote-terms-list';
+        termsSection.append(title, list);
+        $('previewValidity').insertAdjacentElement('afterend', termsSection);
+      }
+
+      const list = $('previewTermsList');
+      list.replaceChildren();
+      const items = [
+        ['Check-in', CONFIG.directBookingTerms.checkInTime],
+        ['Check-out', CONFIG.directBookingTerms.checkOutTime],
+        ['Cancellation', CONFIG.directBookingTerms.cancellationPolicy],
+        ['Payment options', CONFIG.paymentOptionsText],
+        ['Booking confirmation', CONFIG.directBookingTerms.bookingConfirmationText],
+        ['Note', CONFIG.directBookingTerms.footerText]
+      ];
+      items.forEach(([label, value]) => {
+        const term = document.createElement('dt');
+        const description = document.createElement('dd');
+        term.textContent = label;
+        description.textContent = value;
+        list.append(term, description);
+      });
+    }
+
     function renderProductType(quote) {
       let productTypeElement = $('previewProductType');
       if (!productTypeElement) {
@@ -404,6 +448,7 @@
 
     function renderQuote(quote, validation) {
       renderCustomerBranding();
+      renderDirectBookingTerms();
       $('previewReference').textContent = quote.reference;
       $('headerReference').textContent = quote.reference;
       $('previewGuest').textContent = quote.guest;
@@ -446,7 +491,7 @@
       const validActions = validation.isValid;
       ['whatsappButton', 'emailButton', 'printButton'].forEach((id) => {
         const button = $(id);
-        button.disabled = false;
+        button.disabled = !validActions;
         button.setAttribute('aria-disabled', String(!validActions));
         button.classList.toggle('output-action-unavailable', !validActions);
       });
@@ -509,7 +554,20 @@
       if (quote.cleaningEnabled && quote.cleaningFee > 0) lines.push(`Cleaning Fee: ${formatCurrency(quote.cleaningFee)}`);
       lines.push(`Accommodation Total: ${formatCurrency(quote.accommodationTotal)}`);
       if (quote.depositEnabled && quote.securityDeposit > 0) lines.push(`Refundable Security Deposit: ${formatCurrency(quote.securityDeposit)}`);
-      lines.push('', `AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}`, '', `This quotation is valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`);
+      lines.push(
+        '',
+        `AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}`,
+        '',
+        'TERMS & CONDITIONS',
+        `Check-in: ${CONFIG.directBookingTerms.checkInTime}`,
+        `Check-out: ${CONFIG.directBookingTerms.checkOutTime}`,
+        `Cancellation: ${CONFIG.directBookingTerms.cancellationPolicy}`,
+        `Payment Options: ${CONFIG.paymentOptionsText}`,
+        `Booking Confirmation: ${CONFIG.directBookingTerms.bookingConfirmationText}`,
+        CONFIG.directBookingTerms.footerText,
+        '',
+        `This quotation is valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`
+      );
       return lines.join('\n');
     }
 
