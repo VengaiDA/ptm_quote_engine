@@ -1,8 +1,8 @@
 -- PTM quote renderer configuration.
 --
 -- This is deliberately presentation-only. These fields never participate in
--- commercial calculations and nullable terms are omitted by renderers until
--- PTM explicitly approves their values.
+-- commercial calculations. Contact and address fields intentionally remain
+-- nullable until PTM explicitly approves them.
 
 create table public.ptm_quote_presentation_settings (
   property_id uuid primary key references public.ptm_properties(id) on delete restrict,
@@ -41,6 +41,9 @@ revoke all on table public.ptm_quote_presentation_settings from anon, authentica
 insert into public.ptm_quote_presentation_settings (
   property_id,
   operator_name,
+  check_in_time,
+  check_out_time,
+  cancellation_policy,
   accepted_payment_methods,
   quote_validity_hours,
   booking_confirmation_text,
@@ -49,7 +52,10 @@ insert into public.ptm_quote_presentation_settings (
 select
   id,
   'PTM Exclusive',
-  'Cash and EcoCash payments are available.',
+  '14:00 (2:00 PM)',
+  '10:00 AM',
+  'Free cancellation up to 48 hours before check-in.',
+  'Cash and EcoCash accepted.',
   24,
   'A quotation does not secure the selected dates. Your reservation is confirmed once the required payment has been received. Until payment is received, dates remain subject to availability.',
   'Thank you for choosing PTM Exclusive.'

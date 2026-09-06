@@ -117,6 +117,42 @@ async function getProperty() {
   return data
 }
 
+interface QuotePresentationSettings {
+  operatorName: string
+  checkInTime: string
+  checkOutTime: string
+  cancellationPolicy: string
+  acceptedPaymentMethods: string
+  quoteValidityHours: number
+  bookingConfirmationText: string
+  footerText: string
+}
+
+/**
+ * Presentation configuration is deliberately read separately from commercial
+ * rules. The quote engine owns the amount; this record owns only the approved
+ * customer wording and the lifetime of an issued direct quotation.
+ */
+async function activeQuotePresentationSettings(propertyId: string): Promise<QuotePresentationSettings> {
+  const { data, error } = await db.from('ptm_quote_presentation_settings')
+    .select('operator_name,check_in_time,check_out_time,cancellation_policy,accepted_payment_methods,quote_validity_hours,booking_confirmation_text,footer_text')
+    .eq('property_id', propertyId).eq('active', true).maybeSingle()
+  if (error) throw new Error('Quote presentation configuration lookup failed')
+  if (!data) throw new Error('No active quote presentation configuration is available')
+  const quoteValidityHours = positiveInteger(data.quote_validity_hours, 'Quote validity hours')
+  if (!quoteValidityHours) throw new Error('Quote validity hours are required')
+  return {
+    operatorName: text(data.operator_name, 'Presentation operator name', 160, true),
+    checkInTime: text(data.check_in_time, 'Presentation check-in time', 120, true),
+    checkOutTime: text(data.check_out_time, 'Presentation check-out time', 120, true),
+    cancellationPolicy: text(data.cancellation_policy, 'Presentation cancellation policy', 500, true),
+    acceptedPaymentMethods: text(data.accepted_payment_methods, 'Presentation payment methods', 500, true),
+    quoteValidityHours,
+    bookingConfirmationText: text(data.booking_confirmation_text, 'Presentation booking confirmation', 1000, true),
+    footerText: text(data.footer_text, 'Presentation footer', 500, true),
+  }
+}
+
 async function blocks(propertyId: string, start: string, end: string) {
   const { data, error } = await db.from('ptm_bookings')
     .select('booking_code,check_in,check_out,booking_status')
@@ -670,6 +706,8 @@ Deno.serve(async (req: Request) => {
       )
       const propertyCurrency = text(property.currency, 'Property currency', 12, true).toUpperCase()
       if (resolvedPlan.currency !== propertyCurrency) throw new Error('Rate-plan currency does not match its property')
+      const presentation = await activeQuotePresentationSettings(property.id)
+      const expiresAt = new Date(Date.now() + presentation.quoteValidityHours * 60 * 60 * 1000).toISOString()
       const { data: quote, error } = await db.from('ptm_quotes').insert({
         quote_code: makeCode('PTM-Q'), property_id: property.id, agent_id: agent.id, guest_name: guest,
         check_in: checkIn, check_out: checkOut, nights,
@@ -686,6 +724,7 @@ Deno.serve(async (req: Request) => {
         pricing_date: pricing.lineage.pricingDate,
         pricing_lineage_status: 'resolved',
         status: 'issued',
+        expires_at: expiresAt,
       }).select('quote_code,guest_name,check_in,check_out,nights,nightly_rate,discount_percent,subtotal_amount,discount_amount,total_amount,currency,rate_plan_code,pricing_rule_code,pricing_date,status,expires_at').single()
       if (error) return j({ error: 'Could not create quote' }, 500)
       return j({
@@ -699,6 +738,17 @@ Deno.serve(async (req: Request) => {
           },
         },
         agent: { agent_code: agent.agent_code, display_name: agent.display_name },
+        presentation: {
+          property_name: text(property.public_name || property.name, 'Property public name', 160, true),
+          operator_name: presentation.operatorName,
+          check_in_time: presentation.checkInTime,
+          check_out_time: presentation.checkOutTime,
+          cancellation_policy: presentation.cancellationPolicy,
+          accepted_payment_methods: presentation.acceptedPaymentMethods,
+          quote_validity_hours: presentation.quoteValidityHours,
+          booking_confirmation_text: presentation.bookingConfirmationText,
+          footer_text: presentation.footerText,
+        },
       })
     }
     if (action === 'payment_plan') {

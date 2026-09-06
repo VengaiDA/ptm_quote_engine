@@ -4,11 +4,12 @@ Updated 6 September 2026.
 
 ## Applied safely
 
-- `commercial_source_of_truth` is applied to Supabase project
+- `commercial_source_of_truth`, `activate_commercial_source_of_truth`, and
+  `quote_presentation_configuration` are applied to Supabase project
   `frmubomhhnlqrgepmmcm`.
-- The migration preserves the active legacy $65 policy while staging the
-  approved $70 Complete and $50 Flex plans, quote lineage, and the EcoCash
-  payment rail.
+- The live commercial policy is Complete Package at $70/night with 5/10/15/20%
+  tiers at 7/14/21/30 nights, plus internal Flex Option at $50/night with no
+  automatic stay discount. Historical legacy records remain retained.
 - The JWT-protected `ptm-agent-lite-public` Edge Function is deployed at
   version 2. It accepts only the project anonymous key and exposes only
   non-persistent public rate-plan and quote-preview actions.
@@ -18,15 +19,31 @@ Updated 6 September 2026.
   remaining action passes through `authAgent` before it can access property,
   quote, booking, payment, campaign, or admin data.
 
+## Gate A evidence
+
+- Missing credentials, invalid agent code, and invalid token each returned the
+  same generic HTTP 401 response.
+- Dedicated high-entropy UAT Agent and UAT Admin identities completed positive
+  login, agent/admin role-boundary, campaign, availability, official quote,
+  quote-derived payment-plan, booking, and collision tests.
+- The UAT booking holds were cancelled. Both UAT identities are now inactive
+  and their credential rows have been deleted; post-revocation login attempts
+  return HTTP 401. Plaintext UAT tokens were never committed or documented.
+- Backend regression issued resolved-lineage UAT quotes for every approved
+  Complete and Flex discount boundary. Payment plans were balanced for $70,
+  $500, $798, $1,000, $1,487.50, and $1,904; the shared test suite also covers
+  $501 exactly as $500 plus $1.
+
 ## Intentionally pending
 
-- `activate_commercial_source_of_truth` is **not** applied. The replacement
-  function is deployed, but Gate A remains incomplete until a valid, scoped
-  agent credential is supplied for the required positive-authentication,
-  role-boundary, quote, payment-plan, and booking smoke tests.
 - GitHub Pages is not updated to point Agent Lite at the new public API until
-  the commercial activation is safely complete. This prevents a public page
-  from reaching a deliberately staged, inactive price plan.
+  the next presentation function deployment and browser verification are
+  safely complete.
+- Source includes an authenticated Edge Function update which turns the
+  centrally configured 24-hour quotation validity into `expires_at` and
+  returns structured renderer fields. It is staged but not yet deployed: the
+  deployment safeguard requires a fresh explicit approval for that new
+  `verify_jwt = false` function version.
 
 ## Verified evidence
 
@@ -35,5 +52,8 @@ Updated 6 September 2026.
   and invalid token each return the same generic HTTP 401 response.
 - The public Edge Function rejects missing authorization at the gateway with
   HTTP 401.
-- With a valid anonymous key, it reaches the handler and currently reports no
-  public rate plan (HTTP 503), as expected before activation.
+- With a valid anonymous key, the public function returns exactly one public
+  rate plan, Complete Package at $70, and a server-calculated $70 preview.
+- Presentation settings hold the approved direct-booking check-in, check-out,
+  cancellation, payment, 24-hour validity, booking-confirmation, and footer
+  wording. Contact and address values remain intentionally unset.
