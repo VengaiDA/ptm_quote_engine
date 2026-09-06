@@ -11,13 +11,18 @@ Updated 6 September 2026.
   tiers at 7/14/21/30 nights, plus internal Flex Option at $50/night with no
   automatic stay discount. Historical legacy records remain retained.
 - The JWT-protected `ptm-agent-lite-public` Edge Function is deployed at
-  version 2. It accepts only the project anonymous key and exposes only
-  non-persistent public rate-plan and quote-preview actions.
-- The authenticated `ptm-agent-lite` replacement is deployed at version 4 with
+  version 3. It accepts only the project anonymous key and exposes only
+  non-persistent public rate-plan and quote-preview actions. Its responses now
+  include a public-safe, centrally configured enquiry-renderer contract.
+- The authenticated `ptm-agent-lite` replacement is deployed at version 5 with
   `verify_jwt = false`, under PTM's explicitly approved custom-agent-token
   boundary. Its duplicate unauthenticated preview routes were removed; every
   remaining action passes through `authAgent` before it can access property,
   quote, booking, payment, campaign, or admin data.
+- Version 5 calculates `expires_at` on the server from the centrally configured
+  24-hour validity and returns the approved structured direct-booking
+  presentation fields with an official quote. No private token or service-role
+  credential is exposed to a browser.
 
 ## Gate A evidence
 
@@ -33,17 +38,20 @@ Updated 6 September 2026.
   Complete and Flex discount boundary. Payment plans were balanced for $70,
   $500, $798, $1,000, $1,487.50, and $1,904; the shared test suite also covers
   $501 exactly as $500 plus $1.
+- A version 5 official quote smoke test confirmed the server-generated
+  24-hour `expires_at` and every configured renderer field. The temporary UAT
+  identities used for that check were immediately disabled and their credential
+  hashes deleted again.
 
-## Intentionally pending
+## GitHub Pages cutover scope
 
-- GitHub Pages is not updated to point Agent Lite at the new public API until
-  the next presentation function deployment and browser verification are
-  safely complete.
-- Source includes an authenticated Edge Function update which turns the
-  centrally configured 24-hour quotation validity into `expires_at` and
-  returns structured renderer fields. It is staged but not yet deployed: the
-  deployment safeguard requires a fresh explicit approval for that new
-  `verify_jwt = false` function version.
+- The Agent Lite PWA source consumes the public version 3 renderer for its
+  title, total label, estimate notice, and approved stay terms. It remains a
+  no-login public enquiry/estimate interface; it never presents a browser-made
+  value as an official quote and it contains no custom agent credential.
+- The root Quote Console is intentionally not switched to this public route:
+  its existing adjustments and Payment Control require a future authenticated
+  official-quote contract rather than a cosmetic endpoint swap.
 
 ## Verified evidence
 
@@ -53,7 +61,8 @@ Updated 6 September 2026.
 - The public Edge Function rejects missing authorization at the gateway with
   HTTP 401.
 - With a valid anonymous key, the public function returns exactly one public
-  rate plan, Complete Package at $70, and a server-calculated $70 preview.
+  rate plan, Complete Package at $70, a server-calculated $70 preview, and the
+  public-safe structured enquiry renderer with a 24-hour validity value.
 - Presentation settings hold the approved direct-booking check-in, check-out,
   cancellation, payment, 24-hour validity, booking-confirmation, and footer
   wording. Contact and address values remain intentionally unset.

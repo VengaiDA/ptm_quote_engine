@@ -171,6 +171,10 @@
     .summary-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 15px; border-top: 1px solid var(--slate-200); padding-top: 13px; color: var(--navy-800); font-size: .88rem; font-weight: 850; }
     .summary-total strong { color: var(--navy-900); font-size: 1.3rem; letter-spacing: -.025em; }
     .quote-note { margin: 13px 0 0; color: var(--slate-500); font-size: .71rem; line-height: 1.5; }
+    .quote-terms { margin-top: 15px; border-top: 1px solid var(--slate-200); padding-top: 13px; }
+    .terms-list { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); gap: 7px 12px; margin: 9px 0 0; }
+    .terms-list dt { color: var(--slate-500); font-size: .7rem; font-weight: 750; }
+    .terms-list dd { margin: 0; color: var(--slate-700); font-size: .71rem; line-height: 1.45; }
 
     .side-stack { display: grid; gap: 20px; }
     .resources-card, .activity-card { padding: 20px; }
@@ -345,13 +349,13 @@
             </div>
             <button id="copyEnquiry" class="button button-primary quote-action" type="submit" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-              Copy quote / enquiry
+              Copy enquiry
             </button>
           </form>
 
           <article class="quote-preview" aria-live="polite" aria-label="Public enquiry preview">
             <div class="quote-document-head">
-              <div><p id="previewPropertyName" class="section-kicker">PTM accommodation</p><p class="property">Accommodation enquiry</p><p id="previewOperatorName" class="operator">PTM Exclusive</p></div>
+              <div><p id="previewPropertyName" class="section-kicker">PTM accommodation</p><p id="previewDocumentTitle" class="property">Accommodation enquiry</p><p id="previewOperatorName" class="operator">PTM Exclusive</p></div>
               <p id="quoteReference" class="quote-reference"></p>
             </div>
             <div class="document-rule"></div>
@@ -371,8 +375,12 @@
                 <div class="summary-row"><span id="previewGrossLabel">Accommodation</span><strong id="previewGross">—</strong></div>
                 <div id="previewDiscountRow" class="summary-row discount" hidden><span id="previewDiscountLabel">Discount</span><strong id="previewDiscount">—</strong></div>
               </div>
-              <div class="summary-total"><span>Estimated accommodation total</span><strong id="previewTotal">—</strong></div>
-              <p id="quoteNote" class="quote-note">Public pricing preview.</p>
+              <div class="summary-total"><span id="previewTotalLabel">Estimated accommodation total</span><strong id="previewTotal">—</strong></div>
+              <p id="quoteNote" class="quote-note">Public pricing estimate only.</p>
+              <section id="previewTerms" class="quote-terms" aria-labelledby="previewTermsTitle" hidden>
+                <p id="previewTermsTitle" class="meta-label">Stay information and terms</p>
+                <dl id="previewTermsList" class="terms-list"></dl>
+              </section>
             </div>
           </article>
         </div>
@@ -387,7 +395,7 @@
           </details>
           <details data-resource="Public pricing guide">
             <summary>Public pricing guide</summary>
-            <div class="resource-content">Approved public product types, nightly rates and any automatic stay discount are loaded from the quote service. Select a product type and valid stay dates to see the current public preview.</div>
+            <div class="resource-content">Approved public product types, nightly rates and any automatic stay discount are loaded from the quote service. Select a product type and valid stay dates to see the current public pricing estimate.</div>
           </details>
           <details data-resource="Enquiry checklist">
             <summary>Enquiry checklist</summary>
@@ -457,6 +465,7 @@
         retryPricing: document.querySelector('#retryPricing'),
         quoteDetails: document.querySelector('#quoteDetails'),
         previewPropertyName: document.querySelector('#previewPropertyName'),
+        previewDocumentTitle: document.querySelector('#previewDocumentTitle'),
         previewOperatorName: document.querySelector('#previewOperatorName'),
         previewGuestRow: document.querySelector('#previewGuestRow'),
         previewGuest: document.querySelector('#previewGuest'),
@@ -469,8 +478,11 @@
         previewDiscountRow: document.querySelector('#previewDiscountRow'),
         previewDiscountLabel: document.querySelector('#previewDiscountLabel'),
         previewDiscount: document.querySelector('#previewDiscount'),
+        previewTotalLabel: document.querySelector('#previewTotalLabel'),
         previewTotal: document.querySelector('#previewTotal'),
         quoteNote: document.querySelector('#quoteNote'),
+        previewTerms: document.querySelector('#previewTerms'),
+        previewTermsList: document.querySelector('#previewTermsList'),
         downloadCampaign: document.querySelector('#downloadCampaign'),
         shareCampaign: document.querySelector('#shareCampaign'),
         activityList: document.querySelector('#activityList'),
@@ -486,6 +498,7 @@
         outputAttempted: false,
         reference: createReference(),
         property: null,
+        renderer: normaliseRenderer(null),
         ratePlans: [],
         ratePlansStatus: 'loading',
         quote: null,
@@ -620,6 +633,60 @@
         });
       }
 
+      function rendererText(value, fallback, maxLength = 500) {
+        if (typeof value !== 'string') return fallback;
+        const text = value.trim();
+        return text && text.length <= maxLength ? text : fallback;
+      }
+
+      function normaliseRenderer(raw) {
+        const isPublicRenderer = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.mode === 'public_enquiry';
+        const source = isPublicRenderer ? raw : null;
+        const sourceTerms = source && source.terms && typeof source.terms === 'object' && !Array.isArray(source.terms) ? source.terms : {};
+        const validityHours = Number(sourceTerms.quote_validity_hours);
+        return Object.freeze({
+          mode: 'public_enquiry',
+          documentTitle: rendererText(source && source.document_title, 'Accommodation enquiry', 100),
+          totalLabel: rendererText(source && source.total_label, 'Estimated accommodation total', 100),
+          estimateNote: rendererText(source && source.estimate_note, 'Public pricing estimate only. Availability remains subject to reservation confirmation.'),
+          terms: Object.freeze({
+            checkInTime: rendererText(sourceTerms.check_in_time, '', 100),
+            checkOutTime: rendererText(sourceTerms.check_out_time, '', 100),
+            cancellationPolicy: rendererText(sourceTerms.cancellation_policy, ''),
+            acceptedPaymentMethods: rendererText(sourceTerms.accepted_payment_methods, '', 300),
+            quoteValidityHours: Number.isSafeInteger(validityHours) && validityHours > 0 ? validityHours : null,
+            bookingConfirmationText: rendererText(sourceTerms.booking_confirmation_text, ''),
+            footerText: rendererText(sourceTerms.footer_text, '')
+          })
+        });
+      }
+
+      function rendererTermEntries(renderer = state.renderer) {
+        const terms = renderer && renderer.terms ? renderer.terms : {};
+        const entries = [];
+        if (terms.checkInTime) entries.push(['Check-in', terms.checkInTime]);
+        if (terms.checkOutTime) entries.push(['Check-out', terms.checkOutTime]);
+        if (terms.cancellationPolicy) entries.push(['Cancellation', terms.cancellationPolicy]);
+        if (terms.acceptedPaymentMethods) entries.push(['Payment options', terms.acceptedPaymentMethods]);
+        if (terms.quoteValidityHours) entries.push(['Pricing estimate validity', `${terms.quoteValidityHours} ${terms.quoteValidityHours === 1 ? 'hour' : 'hours'}`]);
+        if (terms.bookingConfirmationText) entries.push(['Booking confirmation', terms.bookingConfirmationText]);
+        if (terms.footerText) entries.push(['Note', terms.footerText]);
+        return entries;
+      }
+
+      function renderRendererTerms(renderer = state.renderer) {
+        const entries = rendererTermEntries(renderer);
+        elements.previewTermsList.replaceChildren();
+        entries.forEach(([label, value]) => {
+          const term = document.createElement('dt');
+          const description = document.createElement('dd');
+          term.textContent = label;
+          description.textContent = value;
+          elements.previewTermsList.append(term, description);
+        });
+        setVisible(elements.previewTerms, entries.length > 0);
+      }
+
       function normaliseRatePlan(raw) {
         const code = typeof (raw && raw.code) === 'string' ? raw.code.trim() : '';
         const displayName = typeof (raw && raw.display_name) === 'string' ? raw.display_name.trim() : '';
@@ -728,8 +795,8 @@
       function waitingMessage(values = getFormValues()) {
         if (state.ratePlansStatus === 'loading') return 'Loading approved product types...';
         if (state.ratePlansStatus === 'unavailable') return 'Approved public pricing is temporarily unavailable. Please try again.';
-        if (!selectedRatePlan()) return 'Choose a product type to see the public quote preview.';
-        if (!values.guestName.trim() || !formHasValidDates(values)) return 'Enter a guest name and valid stay dates to see the public quote preview.';
+        if (!selectedRatePlan()) return 'Choose a product type to see the public pricing estimate.';
+        if (!values.guestName.trim() || !formHasValidDates(values)) return 'Enter a guest name and valid stay dates to see the public pricing estimate.';
         return state.quoteMessage || 'Checking availability and current public pricing...';
       }
 
@@ -737,7 +804,10 @@
         const quote = state.quoteStatus === 'ready' ? state.quote : null;
         const ready = Boolean(quote);
         const values = getFormValues();
-        elements.quoteReference.textContent = state.reference;
+        const renderer = state.renderer || normaliseRenderer(null);
+        elements.quoteReference.textContent = `Enquiry reference: ${state.reference}`;
+        elements.previewDocumentTitle.textContent = renderer.documentTitle;
+        elements.previewTotalLabel.textContent = renderer.totalLabel;
         elements.quoteWaitingText.textContent = ready ? '' : waitingMessage(values);
         setVisible(elements.retryPricing, !ready && (state.ratePlansStatus === 'unavailable' || state.quoteStatus === 'error'));
         setVisible(elements.quoteWaiting, !ready);
@@ -762,10 +832,15 @@
             elements.previewDiscount.textContent = `−${formatMoney(quote.discountAmount)}`;
           }
           elements.previewTotal.textContent = formatMoney(quote.totalAmount);
-          elements.quoteNote.textContent = quote.available ? 'Public quote preview. Availability remains subject to reservation confirmation.' : 'These dates are currently unavailable. Adjust the stay dates to prepare an enquiry.';
+          elements.quoteNote.textContent = quote.available
+            ? renderer.estimateNote
+            : `${renderer.estimateNote} These dates are currently unavailable. Adjust the stay dates to prepare an enquiry.`;
+          renderRendererTerms(renderer);
         } else {
           setVisible(elements.previewGuestRow, false);
           setVisible(elements.previewDiscountRow, false);
+          setVisible(elements.previewTerms, false);
+          elements.previewTermsList.replaceChildren();
         }
         elements.copyEnquiry.disabled = !isCopyableQuote(quote);
         renderValidation();
@@ -792,9 +867,10 @@
           const quote = normaliseQuote(response.quote);
           if (!quote) throw new Error('Invalid quote preview response');
           state.quote = quote;
+          state.renderer = normaliseRenderer(response.renderer);
           state.quoteKey = key;
           state.quoteStatus = 'ready';
-          state.quoteMessage = quote.available ? 'Current public quote preview ready.' : 'These dates are unavailable.';
+          state.quoteMessage = quote.available ? 'Current public pricing estimate ready.' : 'These dates are unavailable.';
         } catch (_) {
           if (requestId !== state.previewRequestId) return;
           state.quote = null;
@@ -841,6 +917,7 @@
         stopPendingPreview();
         state.ratePlansStatus = 'loading';
         state.ratePlans = [];
+        state.renderer = normaliseRenderer(null);
         state.quote = null;
         state.quoteKey = null;
         state.quoteStatus = 'idle';
@@ -853,12 +930,14 @@
           const ratePlans = Array.isArray(response.rate_plans) ? response.rate_plans.map(normaliseRatePlan).filter(Boolean) : [];
           if (!ratePlans.length) throw new Error('No rate plans returned');
           state.property = normaliseProperty(response.property);
+          state.renderer = normaliseRenderer(response.renderer);
           state.ratePlans = ratePlans;
           state.ratePlansStatus = 'ready';
-          state.quoteMessage = 'Choose a product type to see the public quote preview.';
+          state.quoteMessage = 'Choose a product type to see the public pricing estimate.';
         } catch (_) {
           if (requestId !== state.ratePlansRequestId) return;
           state.property = null;
+          state.renderer = normaliseRenderer(null);
           state.ratePlans = [];
           state.ratePlansStatus = 'unavailable';
           state.quoteMessage = 'Approved public pricing is temporarily unavailable. Please try again.';
@@ -869,11 +948,12 @@
 
       function buildEnquiryMessage(quote) {
         const property = state.property || normaliseProperty(null);
+        const renderer = state.renderer || normaliseRenderer(null);
         const lines = [
           `*${property.name.toUpperCase()}*`,
           property.operatorName ? `_by ${property.operatorName}_` : '',
-          '*ACCOMMODATION ENQUIRY*',
-          `Reference: ${state.reference}`,
+          `*${renderer.documentTitle.toUpperCase()}*`,
+          `Enquiry reference: ${state.reference}`,
           '',
           `*Guest:* ${quote.guestName}`,
           `*Check-in:* ${formatDate(quote.checkIn)}`,
@@ -892,10 +972,15 @@
           lines.push(`${discountName}${discountDetail}: -${formatMoney(quote.discountAmount)}`);
         }
         lines.push(
-          `*Estimated Accommodation Total: ${formatMoney(quote.totalAmount)}*`,
+          `*${renderer.totalLabel}: ${formatMoney(quote.totalAmount)}*`,
           '--------------------------------',
-          'Please confirm availability for these dates.'
+          renderer.estimateNote
         );
+        const terms = rendererTermEntries(renderer);
+        if (terms.length) {
+          lines.push('', '*STAY INFORMATION AND TERMS*');
+          terms.forEach(([label, value]) => lines.push(`${label}: ${value}`));
+        }
         return lines.join('\n');
       }
 
@@ -1051,8 +1136,8 @@
         }
         try {
           await copyText(buildEnquiryMessage(state.quote));
-          recordActivity('Public quote / enquiry copied');
-          showToast('Quote / enquiry copied.');
+          recordActivity('Public enquiry copied');
+          showToast('Enquiry copied.');
         } catch (_) {
           showToast('Could not copy the enquiry in this browser.');
         }

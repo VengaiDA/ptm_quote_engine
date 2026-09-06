@@ -34,6 +34,16 @@ interface ResolvedPlan {
   automaticDiscountEnabled: boolean
 }
 
+interface PublicPresentationSettings {
+  checkInTime: string
+  checkOutTime: string
+  cancellationPolicy: string
+  acceptedPaymentMethods: string
+  quoteValidityHours: number
+  bookingConfirmationText: string
+  footerText: string
+}
+
 function response(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: jsonHeaders })
 }
@@ -96,6 +106,30 @@ async function currentProperty() {
     .eq('code', 'LOMBARD').eq('active', true).maybeSingle()
   if (error) throw error
   return data as PublicProperty | null
+}
+
+/**
+ * The public enquiry renderer has no commercial authority of its own.  It
+ * reads only centrally approved presentation text so the no-login PWA can
+ * render a customer-safe estimate without recreating policy in the browser.
+ */
+async function activePublicPresentation(propertyId: string): Promise<PublicPresentationSettings> {
+  const { data, error } = await db.from('ptm_quote_presentation_settings')
+    .select('check_in_time,check_out_time,cancellation_policy,accepted_payment_methods,quote_validity_hours,booking_confirmation_text,footer_text')
+    .eq('property_id', propertyId).eq('active', true).maybeSingle()
+  if (error) throw new Error('Quote presentation configuration lookup failed')
+  if (!data) throw new Error('No active quote presentation configuration is available')
+  const quoteValidityHours = positiveInteger(data.quote_validity_hours, 'Quote validity hours')
+  if (!quoteValidityHours) throw new Error('Quote validity hours are required')
+  return {
+    checkInTime: requiredText(data.check_in_time, 'Presentation check-in time', 120),
+    checkOutTime: requiredText(data.check_out_time, 'Presentation check-out time', 120),
+    cancellationPolicy: requiredText(data.cancellation_policy, 'Presentation cancellation policy', 500),
+    acceptedPaymentMethods: requiredText(data.accepted_payment_methods, 'Presentation payment methods', 500),
+    quoteValidityHours,
+    bookingConfirmationText: requiredText(data.booking_confirmation_text, 'Presentation booking confirmation', 1000),
+    footerText: requiredText(data.footer_text, 'Presentation footer', 500),
+  }
 }
 
 function toPlan(row: any): ResolvedPlan {
@@ -171,16 +205,34 @@ function publicProperty(property: PublicProperty) {
   }
 }
 
+function publicRenderer(presentation: PublicPresentationSettings) {
+  return {
+    mode: 'public_enquiry',
+    document_title: 'Accommodation Enquiry',
+    total_label: 'Estimated Accommodation Total',
+    estimate_note: 'Public pricing estimate only. Availability remains subject to reservation confirmation.',
+    terms: {
+      check_in_time: presentation.checkInTime,
+      check_out_time: presentation.checkOutTime,
+      cancellation_policy: presentation.cancellationPolicy,
+      accepted_payment_methods: presentation.acceptedPaymentMethods,
+      quote_validity_hours: presentation.quoteValidityHours,
+      booking_confirmation_text: presentation.bookingConfirmationText,
+      footer_text: presentation.footerText,
+    },
+  }
+}
+
 function planSummary(rules: ApprovedPricingRule[]) {
   const discounts = rules.filter((rule) => rule.discountBasisPoints > 0)
     .sort((left, right) => left.minimumNights - right.minimumNights)
     .map((rule) => `${rule.minimumNights}+ nights ${rule.discountBasisPoints / 100}%`)
-  return discounts.length ? `Automatic stay discounts: ${discounts.join(' · ')}` : 'No automatic length-of-stay discount.'
+  return discounts.length ? `Automatic stay discounts: ${discounts.join(' / ')}` : 'No automatic length-of-stay discount.'
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
-  if (req.method === 'GET') return response({ service: 'PTM Agent Lite public quote preview', status: 'ok', version: '1.0' })
+  if (req.method === 'GET') return response({ service: 'PTM Agent Lite public quote preview', status: 'ok', version: '1.1' })
   if (req.method !== 'POST') return response({ error: 'Method not allowed' }, 405)
 
   try {
@@ -191,6 +243,7 @@ Deno.serve(async (req: Request) => {
     const pricingDate = todayIso()
     const plans = await publicPlans(property, pricingDate)
     if (!plans.length) return response({ error: 'No approved public rate plans are available' }, 503)
+    const renderer = publicRenderer(await activePublicPresentation(property.id))
 
     if (body.action === 'public_rate_plans') {
       const ratePlans = await Promise.all(plans.map(async (resolvedPlan) => {
@@ -203,7 +256,7 @@ Deno.serve(async (req: Request) => {
           automatic_discount_summary: planSummary(rules),
         }
       }))
-      return response({ property: publicProperty(property), rate_plans: ratePlans })
+      return response({ property: publicProperty(property), rate_plans: ratePlans, renderer })
     }
 
     if (body.action === 'public_quote_preview') {
@@ -228,6 +281,8 @@ Deno.serve(async (req: Request) => {
         throw new Error('A no-discount rate plan cannot select a discounted pricing rule')
       }
       return response({
+        property: publicProperty(property),
+        renderer,
         quote: {
           guest_name: guestName,
           check_in: body.check_in,
