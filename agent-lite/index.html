@@ -54,7 +54,7 @@
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
     }
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
     button { cursor: pointer; }
     img { display: block; max-width: 100%; }
     a { color: inherit; }
@@ -135,6 +135,7 @@
     .text-input:focus { border-color: var(--navy-600); box-shadow: 0 0 0 4px var(--navy-100); outline: none; }
     .text-input[aria-invalid="true"] { border-color: var(--rose-700); }
     .field-error { min-height: 0; margin: 6px 0 0; color: var(--rose-700); font-size: .78rem; font-weight: 650; }
+    .field-status { min-height: 0; margin: 6px 0 0; color: var(--slate-500); font-size: .78rem; line-height: 1.45; }
     .date-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .date-fields .field-error { grid-column: 1 / -1; margin-top: -2px; }
     .pricing-rule { border: 1px solid var(--slate-200); border-radius: 10px; background: var(--warm-50); padding: 13px; }
@@ -142,6 +143,8 @@
     .pricing-rule .rate { margin: 3px 0 0; color: var(--navy-900); font-size: 1.22rem; font-weight: 850; letter-spacing: -.025em; }
     .pricing-rule .detail { margin: 3px 0 0; color: var(--slate-500); font-size: .78rem; }
     .quote-action { width: 100%; margin-top: 3px; }
+    .retry-pricing { min-height: 34px; margin-top: 12px; border: 1px solid var(--navy-100); border-radius: 8px; background: #fff; color: var(--navy-800); padding: 7px 10px; font-size: .75rem; font-weight: 800; }
+    .retry-pricing:hover { background: var(--navy-50); }
 
     .quote-preview { border: 1px solid var(--slate-200); border-radius: 12px; background: var(--warm-50); padding: 17px; }
     .quote-document-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -168,6 +171,10 @@
     .summary-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 15px; border-top: 1px solid var(--slate-200); padding-top: 13px; color: var(--navy-800); font-size: .88rem; font-weight: 850; }
     .summary-total strong { color: var(--navy-900); font-size: 1.3rem; letter-spacing: -.025em; }
     .quote-note { margin: 13px 0 0; color: var(--slate-500); font-size: .71rem; line-height: 1.5; }
+    .quote-terms { margin-top: 15px; border-top: 1px solid var(--slate-200); padding-top: 13px; }
+    .terms-list { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); gap: 7px 12px; margin: 9px 0 0; }
+    .terms-list dt { color: var(--slate-500); font-size: .7rem; font-weight: 750; }
+    .terms-list dd { margin: 0; color: var(--slate-700); font-size: .71rem; line-height: 1.45; }
 
     .side-stack { display: grid; gap: 20px; }
     .resources-card, .activity-card { padding: 20px; }
@@ -306,7 +313,7 @@
     <div class="main-grid">
       <section id="quick-enquiry" class="card quote-card" aria-labelledby="enquiry-title">
         <div class="quote-card-top">
-          <div><p class="section-kicker">Quick enquiry</p><h2 id="enquiry-title" class="card-heading">Prepare a public stay enquiry</h2><p>Complete Package uses the approved public rate and automatic length-of-stay pricing only.</p></div>
+          <div><p class="section-kicker">Quick enquiry</p><h2 id="enquiry-title" class="card-heading">Prepare a public stay enquiry</h2><p>Choose an approved product type, then use backend-confirmed public pricing only.</p></div>
           <span class="public-only">Public pricing only</span>
         </div>
         <div class="quote-body">
@@ -327,25 +334,33 @@
               </div>
               <p id="dateError" class="field-error" role="alert" hidden>Choose a check-out date later than check-in.</p>
             </div>
-            <div class="pricing-rule" aria-label="Approved public pricing">
-              <p class="meta-label">Complete Package</p>
-              <p class="rate">$70.00 <span aria-hidden="true">/</span><span style="font-size:.78rem; letter-spacing:0;">night</span></p>
-              <p class="detail">Automatic public discounts: 7+ nights 5% · 14+ nights 10% · 21+ nights 15% · 30+ nights 20%</p>
+            <div class="field-group">
+              <label for="ratePlan">Product type <span class="required">*</span></label>
+              <select id="ratePlan" class="text-input" aria-describedby="ratePlanStatus ratePlanError" disabled>
+                <option value="">Loading approved product types...</option>
+              </select>
+              <p id="ratePlanStatus" class="field-status" role="status" aria-live="polite">Loading approved product types...</p>
+              <p id="ratePlanError" class="field-error" role="alert" hidden>Choose a product type to prepare the enquiry.</p>
+            </div>
+            <div id="pricingRule" class="pricing-rule" aria-label="Backend-confirmed public pricing" hidden>
+              <p id="selectedPlanName" class="meta-label">Approved product type</p>
+              <p id="selectedPlanRate" class="rate">—</p>
+              <p id="selectedPlanDiscount" class="detail"></p>
             </div>
             <button id="copyEnquiry" class="button button-primary quote-action" type="submit" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-              Copy quote / enquiry
+              Copy enquiry
             </button>
           </form>
 
           <article class="quote-preview" aria-live="polite" aria-label="Public enquiry preview">
             <div class="quote-document-head">
-              <div><p class="section-kicker">Cozy Up On 5th</p><p class="property">Accommodation enquiry</p><p class="operator">by PTM Exclusive</p></div>
+              <div><p id="previewPropertyName" class="section-kicker">PTM accommodation</p><p id="previewDocumentTitle" class="property">Accommodation enquiry</p><p id="previewOperatorName" class="operator">PTM Exclusive</p></div>
               <p id="quoteReference" class="quote-reference"></p>
             </div>
             <div class="document-rule"></div>
             <div id="quoteWaiting" class="quote-waiting">
-              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg><div>Add valid stay dates to see the public pricing preview.</div></div>
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg><div id="quoteWaitingText">Loading approved product types...</div><button id="retryPricing" class="retry-pricing" type="button" hidden>Retry public pricing</button></div>
             </div>
             <div id="quoteDetails" hidden>
               <div id="previewGuestRow" class="guest-row" hidden><p class="meta-label">Guest</p><p id="previewGuest" class="guest-value"></p></div>
@@ -353,15 +368,19 @@
                 <div class="stay-item"><p class="meta-label">Check-in</p><p id="previewCheckIn">—</p></div>
                 <div class="stay-item"><p class="meta-label">Check-out</p><p id="previewCheckOut">—</p></div>
                 <div class="stay-item"><p class="meta-label">Duration</p><p id="previewNights">—</p></div>
-                <div class="stay-item"><p class="meta-label">Package</p><p>Complete Package</p></div>
+                <div class="stay-item"><p class="meta-label">Package</p><p id="previewRatePlan">—</p></div>
               </div>
               <div class="summary-title"><span>Pricing summary</span><span>Amount</span></div>
               <div class="summary-rows">
                 <div class="summary-row"><span id="previewGrossLabel">Accommodation</span><strong id="previewGross">—</strong></div>
                 <div id="previewDiscountRow" class="summary-row discount" hidden><span id="previewDiscountLabel">Discount</span><strong id="previewDiscount">—</strong></div>
               </div>
-              <div class="summary-total"><span>Estimated accommodation total</span><strong id="previewTotal">—</strong></div>
-              <p class="quote-note">Public pricing estimate only. Availability remains subject to confirmation.</p>
+              <div class="summary-total"><span id="previewTotalLabel">Estimated accommodation total</span><strong id="previewTotal">—</strong></div>
+              <p id="quoteNote" class="quote-note">Public pricing estimate only.</p>
+              <section id="previewTerms" class="quote-terms" aria-labelledby="previewTermsTitle" hidden>
+                <p id="previewTermsTitle" class="meta-label">Stay information and terms</p>
+                <dl id="previewTermsList" class="terms-list"></dl>
+              </section>
             </div>
           </article>
         </div>
@@ -376,9 +395,7 @@
           </details>
           <details data-resource="Public pricing guide">
             <summary>Public pricing guide</summary>
-            <div class="resource-content">Complete Package begins at $70.00 per night. The system applies one highest eligible stay discount only:
-              <ul><li>7 nights: 5%</li><li>14 nights: 10%</li><li>21 nights: 15%</li><li>30 nights: 20%</li></ul>
-            </div>
+            <div class="resource-content">Approved public product types, nightly rates and any automatic stay discount are loaded from the quote service. Select a product type and valid stay dates to see the current public pricing estimate.</div>
           </details>
           <details data-resource="Enquiry checklist">
             <summary>Enquiry checklist</summary>
@@ -411,19 +428,13 @@
       'use strict';
 
       const CONFIG = Object.freeze({
-        operatorName: 'PTM Exclusive',
-        propertyName: 'Cozy Up On 5th',
-        currencySymbol: '$',
-        product: Object.freeze({
-          name: 'Complete Package',
-          nightlyRateCents: 7000,
-          discounts: Object.freeze([
-            Object.freeze({ minimumNights: 30, percentage: 20, label: 'Monthly Stay Discount' }),
-            Object.freeze({ minimumNights: 21, percentage: 15, label: 'Three-Week Stay Discount' }),
-            Object.freeze({ minimumNights: 14, percentage: 10, label: 'Fortnight Stay Discount' }),
-            Object.freeze({ minimumNights: 7, percentage: 5, label: 'Weekly Stay Discount' })
-          ])
-        }),
+        publicQuoteApi: 'https://frmubomhhnlqrgepmmcm.supabase.co/functions/v1/ptm-agent-lite-public',
+        // A Supabase anonymous key identifies this no-login, read-only surface.
+        // It is intentionally publishable; it is not a service-role secret.
+        publicQuoteApiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZybXVib21oaG5scXJnZXBtbWNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMzM2NjgsImV4cCI6MjEwMzgwOTY2OH0.G3YULTzlP_D-Lh9qKqr4U7xusqjoN_-fsGbyJzcfg-0',
+        fallbackPropertyName: 'PTM accommodation',
+        fallbackOperatorName: 'PTM Exclusive',
+        fallbackCurrency: 'USD',
         campaign: Object.freeze({
           title: 'PTM Exclusive September Campaign',
           artwork: './assets/lombard-september-campaign.png',
@@ -438,23 +449,40 @@
         guestName: document.querySelector('#guestName'),
         checkIn: document.querySelector('#checkIn'),
         checkOut: document.querySelector('#checkOut'),
+        ratePlan: document.querySelector('#ratePlan'),
         guestError: document.querySelector('#guestError'),
         dateError: document.querySelector('#dateError'),
+        ratePlanStatus: document.querySelector('#ratePlanStatus'),
+        ratePlanError: document.querySelector('#ratePlanError'),
+        pricingRule: document.querySelector('#pricingRule'),
+        selectedPlanName: document.querySelector('#selectedPlanName'),
+        selectedPlanRate: document.querySelector('#selectedPlanRate'),
+        selectedPlanDiscount: document.querySelector('#selectedPlanDiscount'),
         copyEnquiry: document.querySelector('#copyEnquiry'),
         quoteReference: document.querySelector('#quoteReference'),
         quoteWaiting: document.querySelector('#quoteWaiting'),
+        quoteWaitingText: document.querySelector('#quoteWaitingText'),
+        retryPricing: document.querySelector('#retryPricing'),
         quoteDetails: document.querySelector('#quoteDetails'),
+        previewPropertyName: document.querySelector('#previewPropertyName'),
+        previewDocumentTitle: document.querySelector('#previewDocumentTitle'),
+        previewOperatorName: document.querySelector('#previewOperatorName'),
         previewGuestRow: document.querySelector('#previewGuestRow'),
         previewGuest: document.querySelector('#previewGuest'),
         previewCheckIn: document.querySelector('#previewCheckIn'),
         previewCheckOut: document.querySelector('#previewCheckOut'),
         previewNights: document.querySelector('#previewNights'),
+        previewRatePlan: document.querySelector('#previewRatePlan'),
         previewGrossLabel: document.querySelector('#previewGrossLabel'),
         previewGross: document.querySelector('#previewGross'),
         previewDiscountRow: document.querySelector('#previewDiscountRow'),
         previewDiscountLabel: document.querySelector('#previewDiscountLabel'),
         previewDiscount: document.querySelector('#previewDiscount'),
+        previewTotalLabel: document.querySelector('#previewTotalLabel'),
         previewTotal: document.querySelector('#previewTotal'),
+        quoteNote: document.querySelector('#quoteNote'),
+        previewTerms: document.querySelector('#previewTerms'),
+        previewTermsList: document.querySelector('#previewTermsList'),
         downloadCampaign: document.querySelector('#downloadCampaign'),
         shareCampaign: document.querySelector('#shareCampaign'),
         activityList: document.querySelector('#activityList'),
@@ -466,9 +494,20 @@
       const state = {
         guestTouched: false,
         datesTouched: false,
+        ratePlanTouched: false,
         outputAttempted: false,
         reference: createReference(),
+        property: null,
+        renderer: normaliseRenderer(null),
+        ratePlans: [],
+        ratePlansStatus: 'loading',
         quote: null,
+        quoteStatus: 'idle',
+        quoteKey: null,
+        quoteMessage: 'Loading approved product types...',
+        previewRequestId: 0,
+        previewTimer: null,
+        ratePlansRequestId: 0,
         toastTimer: null
       };
 
@@ -484,8 +523,26 @@
         return `PTM-AL-${ymd}-${token}`;
       }
 
-      function moneyFromCents(cents) {
-        return `${CONFIG.currencySymbol}${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      function normalizeCurrency(value) {
+        const currency = String(value || CONFIG.fallbackCurrency).trim().toUpperCase();
+        return /^[A-Z]{3}$/.test(currency) ? currency : CONFIG.fallbackCurrency;
+      }
+
+      function formatMoney(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount)) return '—';
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: normalizeCurrency(state.property && state.property.currency),
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(amount);
+      }
+
+      function toFiniteNumber(value) {
+        if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
       }
 
       function parseDate(value) {
@@ -508,31 +565,39 @@
         return date ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date) : '—';
       }
 
-      function resolveAutomaticDiscount(nights) {
-        return CONFIG.product.discounts.find((tier) => nights >= tier.minimumNights) || null;
+      function selectedRatePlan() {
+        return state.ratePlans.find((plan) => plan.code === elements.ratePlan.value) || null;
       }
 
-      function buildQuote({ guestName, checkIn, checkOut }) {
-        const nights = calculateNights(checkIn, checkOut);
-        if (!nights) return null;
-        const grossCents = nights * CONFIG.product.nightlyRateCents;
-        const discountTier = resolveAutomaticDiscount(nights);
-        const discountCents = discountTier ? Math.round(grossCents * discountTier.percentage / 100) : 0;
-        return Object.freeze({
-          guestName: (guestName || '').trim(),
-          checkIn,
-          checkOut,
-          nights,
-          rateCents: CONFIG.product.nightlyRateCents,
-          grossCents,
-          discountTier,
-          discountCents,
-          totalCents: grossCents - discountCents
-        });
+      function formHasValidDates(values = getFormValues()) {
+        return Boolean(calculateNights(values.checkIn, values.checkOut));
       }
 
-      function isCompleteQuote(quote) {
-        return Boolean(quote && quote.guestName && quote.nights > 0 && quote.totalCents > 0);
+      function previewInputIsReady(values = getFormValues()) {
+        return Boolean(
+          state.ratePlansStatus === 'ready' &&
+          selectedRatePlan() &&
+          values.guestName.trim() &&
+          formHasValidDates(values)
+        );
+      }
+
+      function previewKey(values = getFormValues()) {
+        const plan = selectedRatePlan();
+        return plan ? [plan.code, values.guestName.trim(), values.checkIn, values.checkOut].join('|') : '';
+      }
+
+      function isCopyableQuote(quote) {
+        return Boolean(
+          quote &&
+          quote.available === true &&
+          quote.guestName &&
+          quote.ratePlan &&
+          Number.isInteger(quote.nights) &&
+          quote.nights > 0 &&
+          toFiniteNumber(quote.totalAmount) !== null &&
+          toFiniteNumber(quote.totalAmount) > 0
+        );
       }
 
       function getFormValues() {
@@ -546,69 +611,376 @@
       function renderValidation() {
         const values = getFormValues();
         const guestMissing = !values.guestName.trim();
-        const datesValid = Boolean(calculateNights(values.checkIn, values.checkOut));
+        const datesValid = formHasValidDates(values);
+        const ratePlanMissing = state.ratePlansStatus === 'ready' && !selectedRatePlan();
         const showGuestError = guestMissing && (state.guestTouched || state.outputAttempted);
         const showDateError = !datesValid && (state.datesTouched || state.outputAttempted);
+        const showRatePlanError = ratePlanMissing && (state.ratePlanTouched || state.outputAttempted);
         elements.guestName.setAttribute('aria-invalid', String(showGuestError));
         elements.checkIn.setAttribute('aria-invalid', String(showDateError));
         elements.checkOut.setAttribute('aria-invalid', String(showDateError));
+        elements.ratePlan.setAttribute('aria-invalid', String(showRatePlanError));
         setVisible(elements.guestError, showGuestError);
         setVisible(elements.dateError, showDateError);
+        setVisible(elements.ratePlanError, showRatePlanError);
+      }
+
+      function normaliseProperty(raw) {
+        return Object.freeze({
+          name: typeof (raw && raw.name) === 'string' && raw.name.trim() ? raw.name.trim() : CONFIG.fallbackPropertyName,
+          operatorName: typeof (raw && raw.operator_name) === 'string' && raw.operator_name.trim() ? raw.operator_name.trim() : CONFIG.fallbackOperatorName,
+          currency: normalizeCurrency(raw && raw.currency)
+        });
+      }
+
+      function rendererText(value, fallback, maxLength = 500) {
+        if (typeof value !== 'string') return fallback;
+        const text = value.trim();
+        return text && text.length <= maxLength ? text : fallback;
+      }
+
+      function normaliseRenderer(raw) {
+        const isPublicRenderer = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.mode === 'public_enquiry';
+        const source = isPublicRenderer ? raw : null;
+        const sourceTerms = source && source.terms && typeof source.terms === 'object' && !Array.isArray(source.terms) ? source.terms : {};
+        const validityHours = Number(sourceTerms.quote_validity_hours);
+        return Object.freeze({
+          mode: 'public_enquiry',
+          documentTitle: rendererText(source && source.document_title, 'Accommodation enquiry', 100),
+          totalLabel: rendererText(source && source.total_label, 'Estimated accommodation total', 100),
+          estimateNote: rendererText(source && source.estimate_note, 'Public pricing estimate only. Availability remains subject to reservation confirmation.'),
+          terms: Object.freeze({
+            checkInTime: rendererText(sourceTerms.check_in_time, '', 100),
+            checkOutTime: rendererText(sourceTerms.check_out_time, '', 100),
+            cancellationPolicy: rendererText(sourceTerms.cancellation_policy, ''),
+            acceptedPaymentMethods: rendererText(sourceTerms.accepted_payment_methods, '', 300),
+            quoteValidityHours: Number.isSafeInteger(validityHours) && validityHours > 0 ? validityHours : null,
+            bookingConfirmationText: rendererText(sourceTerms.booking_confirmation_text, ''),
+            footerText: rendererText(sourceTerms.footer_text, '')
+          })
+        });
+      }
+
+      function rendererTermEntries(renderer = state.renderer) {
+        const terms = renderer && renderer.terms ? renderer.terms : {};
+        const entries = [];
+        if (terms.checkInTime) entries.push(['Check-in', terms.checkInTime]);
+        if (terms.checkOutTime) entries.push(['Check-out', terms.checkOutTime]);
+        if (terms.cancellationPolicy) entries.push(['Cancellation', terms.cancellationPolicy]);
+        if (terms.acceptedPaymentMethods) entries.push(['Payment options', terms.acceptedPaymentMethods]);
+        if (terms.quoteValidityHours) entries.push(['Pricing estimate validity', `${terms.quoteValidityHours} ${terms.quoteValidityHours === 1 ? 'hour' : 'hours'}`]);
+        if (terms.bookingConfirmationText) entries.push(['Booking confirmation', terms.bookingConfirmationText]);
+        if (terms.footerText) entries.push(['Note', terms.footerText]);
+        return entries;
+      }
+
+      function renderRendererTerms(renderer = state.renderer) {
+        const entries = rendererTermEntries(renderer);
+        elements.previewTermsList.replaceChildren();
+        entries.forEach(([label, value]) => {
+          const term = document.createElement('dt');
+          const description = document.createElement('dd');
+          term.textContent = label;
+          description.textContent = value;
+          elements.previewTermsList.append(term, description);
+        });
+        setVisible(elements.previewTerms, entries.length > 0);
+      }
+
+      function normaliseRatePlan(raw) {
+        const code = typeof (raw && raw.code) === 'string' ? raw.code.trim() : '';
+        const displayName = typeof (raw && raw.display_name) === 'string' ? raw.display_name.trim() : '';
+        if (!code || !displayName || toFiniteNumber(raw && raw.nightly_rate) === null) return null;
+        return Object.freeze({
+          code,
+          displayName,
+          nightlyRate: raw.nightly_rate,
+          automaticDiscountSummary: typeof (raw && raw.automatic_discount_summary) === 'string' ? raw.automatic_discount_summary.trim() : ''
+        });
+      }
+
+      function normaliseQuote(raw) {
+        const ratePlan = raw && raw.rate_plan;
+        const guestName = typeof (raw && raw.guest_name) === 'string' ? raw.guest_name.trim() : '';
+        const checkIn = typeof (raw && raw.check_in) === 'string' ? raw.check_in : '';
+        const checkOut = typeof (raw && raw.check_out) === 'string' ? raw.check_out : '';
+        const nights = Number(raw && raw.nights);
+        const ratePlanCode = typeof (ratePlan && ratePlan.code) === 'string' ? ratePlan.code.trim() : '';
+        const ratePlanName = typeof (ratePlan && ratePlan.display_name) === 'string' ? ratePlan.display_name.trim() : '';
+        const moneyFields = ['nightly_rate', 'gross_amount', 'discount_amount', 'total_amount'];
+        const hasInvalidMoney = moneyFields.some((field) => toFiniteNumber(raw && raw[field]) === null);
+        if (!guestName || !parseDate(checkIn) || !parseDate(checkOut) || !Number.isInteger(nights) || nights < 1 || !ratePlanCode || !ratePlanName || hasInvalidMoney || typeof (raw && raw.available) !== 'boolean') return null;
+        return Object.freeze({
+          guestName,
+          checkIn,
+          checkOut,
+          nights,
+          ratePlan: Object.freeze({ code: ratePlanCode, displayName: ratePlanName }),
+          nightlyRate: raw.nightly_rate,
+          grossAmount: raw.gross_amount,
+          discountPercent: raw.discount_percent,
+          discountLabel: typeof raw.discount_label === 'string' ? raw.discount_label.trim() : '',
+          discountAmount: raw.discount_amount,
+          totalAmount: raw.total_amount,
+          available: raw.available
+        });
+      }
+
+      async function callPublicQuoteApi(payload) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 12000);
+        try {
+          const response = await fetch(CONFIG.publicQuoteApi, {
+            method: 'POST',
+            credentials: 'omit',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${CONFIG.publicQuoteApiKey}`,
+              'apikey': CONFIG.publicQuoteApiKey
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          const body = await response.json().catch(() => null);
+          if (!response.ok || !body) throw new Error('Public quote service unavailable');
+          return body;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      }
+
+      function renderRatePlans() {
+        const selectedCode = elements.ratePlan.value;
+        elements.ratePlan.replaceChildren();
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.disabled = true;
+        placeholder.textContent = state.ratePlansStatus === 'loading' ? 'Loading approved product types...' : 'Choose a product type';
+        elements.ratePlan.append(placeholder);
+        state.ratePlans.forEach((plan) => {
+          const option = document.createElement('option');
+          option.value = plan.code;
+          option.textContent = plan.displayName;
+          elements.ratePlan.append(option);
+        });
+        elements.ratePlan.disabled = state.ratePlansStatus !== 'ready' || state.ratePlans.length === 0;
+        elements.ratePlan.value = state.ratePlans.some((plan) => plan.code === selectedCode) ? selectedCode : '';
+        if (state.ratePlansStatus === 'loading') {
+          elements.ratePlanStatus.textContent = 'Loading approved product types...';
+        } else if (state.ratePlansStatus === 'unavailable') {
+          elements.ratePlanStatus.textContent = 'Approved product types are temporarily unavailable. Try again.';
+        } else if (state.ratePlans.length === 0) {
+          elements.ratePlanStatus.textContent = 'No approved product types are available right now.';
+        } else {
+          elements.ratePlanStatus.textContent = 'Product types are supplied by the quote service.';
+        }
+        renderSelectedRatePlan();
+      }
+
+      function renderSelectedRatePlan() {
+        const plan = selectedRatePlan();
+        setVisible(elements.pricingRule, Boolean(plan));
+        if (!plan) return;
+        elements.selectedPlanName.textContent = plan.displayName;
+        elements.selectedPlanRate.textContent = `${formatMoney(plan.nightlyRate)} / night`;
+        elements.selectedPlanDiscount.textContent = plan.automaticDiscountSummary || 'Automatic discount details are supplied by the quote service.';
+      }
+
+      function renderPropertyBranding() {
+        const property = state.property || normaliseProperty(null);
+        elements.previewPropertyName.textContent = property.name;
+        elements.previewOperatorName.textContent = property.operatorName ? `by ${property.operatorName}` : '';
+      }
+
+      function waitingMessage(values = getFormValues()) {
+        if (state.ratePlansStatus === 'loading') return 'Loading approved product types...';
+        if (state.ratePlansStatus === 'unavailable') return 'Approved public pricing is temporarily unavailable. Please try again.';
+        if (!selectedRatePlan()) return 'Choose a product type to see the public pricing estimate.';
+        if (!values.guestName.trim() || !formHasValidDates(values)) return 'Enter a guest name and valid stay dates to see the public pricing estimate.';
+        return state.quoteMessage || 'Checking availability and current public pricing...';
       }
 
       function renderQuote() {
-        const values = getFormValues();
-        const quote = buildQuote(values);
-        state.quote = quote;
-        elements.quoteReference.textContent = state.reference;
-        const guest = values.guestName.trim();
+        const quote = state.quoteStatus === 'ready' ? state.quote : null;
         const ready = Boolean(quote);
+        const values = getFormValues();
+        const renderer = state.renderer || normaliseRenderer(null);
+        elements.quoteReference.textContent = `Enquiry reference: ${state.reference}`;
+        elements.previewDocumentTitle.textContent = renderer.documentTitle;
+        elements.previewTotalLabel.textContent = renderer.totalLabel;
+        elements.quoteWaitingText.textContent = ready ? '' : waitingMessage(values);
+        setVisible(elements.retryPricing, !ready && (state.ratePlansStatus === 'unavailable' || state.quoteStatus === 'error'));
         setVisible(elements.quoteWaiting, !ready);
         setVisible(elements.quoteDetails, ready);
-        setVisible(elements.previewGuestRow, Boolean(guest));
-        if (guest) elements.previewGuest.textContent = guest;
+        renderPropertyBranding();
         if (quote) {
+          setVisible(elements.previewGuestRow, Boolean(quote.guestName));
+          elements.previewGuest.textContent = quote.guestName;
           elements.previewCheckIn.textContent = formatDate(quote.checkIn);
           elements.previewCheckOut.textContent = formatDate(quote.checkOut);
           elements.previewNights.textContent = `${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'}`;
-          elements.previewGrossLabel.textContent = `${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'} × ${moneyFromCents(quote.rateCents)}`;
-          elements.previewGross.textContent = moneyFromCents(quote.grossCents);
-          const hasDiscount = Boolean(quote.discountTier && quote.discountCents > 0);
+          elements.previewRatePlan.textContent = quote.ratePlan.displayName;
+          elements.previewGrossLabel.textContent = `${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'} × ${formatMoney(quote.nightlyRate)}`;
+          elements.previewGross.textContent = formatMoney(quote.grossAmount);
+          const discountAmount = toFiniteNumber(quote.discountAmount);
+          const discountPercent = toFiniteNumber(quote.discountPercent);
+          const hasDiscount = discountAmount !== null && discountAmount > 0;
           setVisible(elements.previewDiscountRow, hasDiscount);
           if (hasDiscount) {
-            elements.previewDiscountLabel.textContent = `${quote.discountTier.label} (${quote.discountTier.percentage}%)`;
-            elements.previewDiscount.textContent = `−${moneyFromCents(quote.discountCents)}`;
+            const discountName = quote.discountLabel || 'Discount';
+            elements.previewDiscountLabel.textContent = discountPercent !== null && discountPercent > 0 ? `${discountName} (${discountPercent}%)` : discountName;
+            elements.previewDiscount.textContent = `−${formatMoney(quote.discountAmount)}`;
           }
-          elements.previewTotal.textContent = moneyFromCents(quote.totalCents);
+          elements.previewTotal.textContent = formatMoney(quote.totalAmount);
+          elements.quoteNote.textContent = quote.available
+            ? renderer.estimateNote
+            : `${renderer.estimateNote} These dates are currently unavailable. Adjust the stay dates to prepare an enquiry.`;
+          renderRendererTerms(renderer);
+        } else {
+          setVisible(elements.previewGuestRow, false);
+          setVisible(elements.previewDiscountRow, false);
+          setVisible(elements.previewTerms, false);
+          elements.previewTermsList.replaceChildren();
         }
-        elements.copyEnquiry.disabled = !isCompleteQuote(quote);
+        elements.copyEnquiry.disabled = !isCopyableQuote(quote);
         renderValidation();
       }
 
+      function stopPendingPreview() {
+        if (state.previewTimer) {
+          window.clearTimeout(state.previewTimer);
+          state.previewTimer = null;
+        }
+        state.previewRequestId += 1;
+      }
+
+      async function loadQuotePreview(values, ratePlanCode, key, requestId) {
+        try {
+          const response = await callPublicQuoteApi({
+            action: 'public_quote_preview',
+            rate_plan_code: ratePlanCode,
+            guest_name: values.guestName.trim(),
+            check_in: values.checkIn,
+            check_out: values.checkOut
+          });
+          if (requestId !== state.previewRequestId) return;
+          const quote = normaliseQuote(response.quote);
+          if (!quote) throw new Error('Invalid quote preview response');
+          state.quote = quote;
+          state.renderer = normaliseRenderer(response.renderer);
+          state.quoteKey = key;
+          state.quoteStatus = 'ready';
+          state.quoteMessage = quote.available ? 'Current public pricing estimate ready.' : 'These dates are unavailable.';
+        } catch (_) {
+          if (requestId !== state.previewRequestId) return;
+          state.quote = null;
+          state.quoteKey = null;
+          state.quoteStatus = 'error';
+          state.quoteMessage = 'Approved public pricing is temporarily unavailable. Please try again.';
+        }
+        renderQuote();
+      }
+
+      function refreshQuotePreview() {
+        const values = getFormValues();
+        if (!previewInputIsReady(values)) {
+          stopPendingPreview();
+          state.quote = null;
+          state.quoteKey = null;
+          state.quoteStatus = 'idle';
+          state.quoteMessage = waitingMessage(values);
+          renderQuote();
+          return;
+        }
+        const key = previewKey(values);
+        if ((state.quoteStatus === 'ready' || state.quoteStatus === 'loading') && state.quoteKey === key) {
+          renderQuote();
+          return;
+        }
+        stopPendingPreview();
+        const requestId = state.previewRequestId;
+        state.quote = null;
+        state.quoteKey = key;
+        state.quoteStatus = 'loading';
+        state.quoteMessage = 'Checking availability and current public pricing...';
+        const ratePlanCode = selectedRatePlan().code;
+        state.previewTimer = window.setTimeout(() => {
+          state.previewTimer = null;
+          loadQuotePreview(values, ratePlanCode, key, requestId);
+        }, 280);
+        renderQuote();
+      }
+
+      async function loadRatePlans() {
+        const requestId = state.ratePlansRequestId + 1;
+        state.ratePlansRequestId = requestId;
+        stopPendingPreview();
+        state.ratePlansStatus = 'loading';
+        state.ratePlans = [];
+        state.renderer = normaliseRenderer(null);
+        state.quote = null;
+        state.quoteKey = null;
+        state.quoteStatus = 'idle';
+        state.quoteMessage = 'Loading approved product types...';
+        renderRatePlans();
+        renderQuote();
+        try {
+          const response = await callPublicQuoteApi({ action: 'public_rate_plans' });
+          if (requestId !== state.ratePlansRequestId) return;
+          const ratePlans = Array.isArray(response.rate_plans) ? response.rate_plans.map(normaliseRatePlan).filter(Boolean) : [];
+          if (!ratePlans.length) throw new Error('No rate plans returned');
+          state.property = normaliseProperty(response.property);
+          state.renderer = normaliseRenderer(response.renderer);
+          state.ratePlans = ratePlans;
+          state.ratePlansStatus = 'ready';
+          state.quoteMessage = 'Choose a product type to see the public pricing estimate.';
+        } catch (_) {
+          if (requestId !== state.ratePlansRequestId) return;
+          state.property = null;
+          state.renderer = normaliseRenderer(null);
+          state.ratePlans = [];
+          state.ratePlansStatus = 'unavailable';
+          state.quoteMessage = 'Approved public pricing is temporarily unavailable. Please try again.';
+        }
+        renderRatePlans();
+        refreshQuotePreview();
+      }
+
       function buildEnquiryMessage(quote) {
+        const property = state.property || normaliseProperty(null);
+        const renderer = state.renderer || normaliseRenderer(null);
         const lines = [
-          `*${CONFIG.propertyName.toUpperCase()}*`,
-          `_by ${CONFIG.operatorName}_`,
-          '*ACCOMMODATION ENQUIRY*',
-          `Reference: ${state.reference}`,
+          `*${property.name.toUpperCase()}*`,
+          property.operatorName ? `_by ${property.operatorName}_` : '',
+          `*${renderer.documentTitle.toUpperCase()}*`,
+          `Enquiry reference: ${state.reference}`,
           '',
           `*Guest:* ${quote.guestName}`,
           `*Check-in:* ${formatDate(quote.checkIn)}`,
           `*Check-out:* ${formatDate(quote.checkOut)}`,
           `*Duration:* ${quote.nights} ${quote.nights === 1 ? 'Night' : 'Nights'}`,
-          '*Package:* Complete Package',
+          `*Package:* ${quote.ratePlan.displayName}`,
           '--------------------------------',
-          `Nightly Rate: ${moneyFromCents(quote.rateCents)}`,
-          `Accommodation Subtotal: ${moneyFromCents(quote.grossCents)}`
-        ];
-        if (quote.discountTier && quote.discountCents > 0) {
-          lines.push(`${quote.discountTier.label} (${quote.discountTier.percentage}%): -${moneyFromCents(quote.discountCents)}`);
+          `Nightly Rate: ${formatMoney(quote.nightlyRate)}`,
+          `Accommodation Subtotal: ${formatMoney(quote.grossAmount)}`
+        ].filter(Boolean);
+        const discountAmount = toFiniteNumber(quote.discountAmount);
+        const discountPercent = toFiniteNumber(quote.discountPercent);
+        if (discountAmount !== null && discountAmount > 0) {
+          const discountName = quote.discountLabel || 'Discount';
+          const discountDetail = discountPercent !== null && discountPercent > 0 ? ` (${discountPercent}%)` : '';
+          lines.push(`${discountName}${discountDetail}: -${formatMoney(quote.discountAmount)}`);
         }
         lines.push(
-          `*Estimated Accommodation Total: ${moneyFromCents(quote.totalCents)}*`,
+          `*${renderer.totalLabel}: ${formatMoney(quote.totalAmount)}*`,
           '--------------------------------',
-          'Please confirm availability for these dates.'
+          renderer.estimateNote
         );
+        const terms = rendererTermEntries(renderer);
+        if (terms.length) {
+          lines.push('', '*STAY INFORMATION AND TERMS*');
+          terms.forEach(([label, value]) => lines.push(`${label}: ${value}`));
+        }
         return lines.join('\n');
       }
 
@@ -723,24 +1095,49 @@
         }
       }
 
-      elements.guestName.addEventListener('input', renderQuote);
-      elements.checkIn.addEventListener('input', renderQuote);
-      elements.checkOut.addEventListener('input', renderQuote);
+      function focusFirstIncompleteField() {
+        const values = getFormValues();
+        if (!values.guestName.trim()) return elements.guestName;
+        if (!selectedRatePlan()) return elements.ratePlan;
+        return !formHasValidDates(values) ? elements.checkIn : null;
+      }
+
+      elements.guestName.addEventListener('input', refreshQuotePreview);
+      elements.checkIn.addEventListener('input', refreshQuotePreview);
+      elements.checkOut.addEventListener('input', refreshQuotePreview);
+      elements.ratePlan.addEventListener('change', () => {
+        state.ratePlanTouched = true;
+        renderSelectedRatePlan();
+        refreshQuotePreview();
+      });
       elements.guestName.addEventListener('blur', () => { state.guestTouched = true; renderValidation(); });
       [elements.checkIn, elements.checkOut].forEach((input) => input.addEventListener('blur', () => { state.datesTouched = true; renderValidation(); }));
+      elements.ratePlan.addEventListener('blur', () => { state.ratePlanTouched = true; renderValidation(); });
       elements.form.addEventListener('submit', async (event) => {
         event.preventDefault();
         state.outputAttempted = true;
-        renderQuote();
-        if (!isCompleteQuote(state.quote)) {
-          const invalid = !elements.guestName.value.trim() ? elements.guestName : elements.checkIn;
-          invalid.focus();
+        renderValidation();
+        if (!previewInputIsReady()) {
+          refreshQuotePreview();
+          const invalid = focusFirstIncompleteField();
+          if (invalid) invalid.focus();
+          return;
+        }
+        if (!isCopyableQuote(state.quote)) {
+          refreshQuotePreview();
+          if (state.quoteStatus === 'ready' && state.quote && !state.quote.available) {
+            showToast('Those dates are currently unavailable.');
+          } else if (state.quoteStatus === 'error' || state.ratePlansStatus === 'unavailable') {
+            showToast('Approved public pricing is temporarily unavailable.');
+          } else {
+            showToast('Checking availability and public pricing...');
+          }
           return;
         }
         try {
           await copyText(buildEnquiryMessage(state.quote));
-          recordActivity('Public quote / enquiry copied');
-          showToast('Quote / enquiry copied.');
+          recordActivity('Public enquiry copied');
+          showToast('Enquiry copied.');
         } catch (_) {
           showToast('Could not copy the enquiry in this browser.');
         }
@@ -750,6 +1147,13 @@
         showToast('Campaign download started.');
       });
       elements.shareCampaign.addEventListener('click', shareCampaign);
+      elements.retryPricing.addEventListener('click', () => {
+        if (state.ratePlansStatus === 'unavailable') {
+          loadRatePlans();
+        } else {
+          refreshQuotePreview();
+        }
+      });
       document.querySelectorAll('[data-resource]').forEach((detail) => detail.addEventListener('toggle', () => {
         if (detail.open) recordActivity(`${detail.dataset.resource} opened`);
       }));
@@ -772,7 +1176,8 @@
         window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(() => {}));
       }
 
-      window.PTMAgentLite = Object.freeze({ CONFIG, calculateNights, resolveAutomaticDiscount, buildQuote });
+      loadRatePlans();
+      window.PTMAgentLite = Object.freeze({ CONFIG, calculateNights, refreshQuotePreview });
     })();
   </script>
 </body>

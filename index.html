@@ -654,13 +654,23 @@
         <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div class="min-w-0">
             <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Internal payment tool</p>
-            <div class="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h3 id="payment-tools-title" class="text-sm font-bold text-navy-900">EcoCash</h3>
-              <span id="ecocashAgentDetails" class="text-xs font-medium text-slate-500"></span>
-              <button id="copyAgentCodeButton" type="button" aria-label="Copy EcoCash agent code" title="Copy agent code" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-navy-50 hover:text-navy-800 focus:outline-none focus:ring-4 focus:ring-navy-100">
-                <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
-              </button>
+            <h3 id="payment-tools-title" class="mt-0.5 text-sm font-bold text-navy-900">EcoCash Agent</h3>
+            <div class="mt-2 grid gap-x-5 gap-y-1 text-xs sm:grid-cols-2">
+              <div>
+                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Agent name</p>
+                <p id="ecocashAgentName" class="font-semibold text-slate-600"></p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Agent code</p>
+                <div class="flex items-center gap-1">
+                  <code id="ecocashAgentCode" class="font-semibold text-slate-600"></code>
+                  <button id="copyAgentCodeButton" type="button" aria-label="Copy EcoCash agent code" title="Copy agent code" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-navy-50 hover:text-navy-800 focus:outline-none focus:ring-4 focus:ring-navy-100">
+                    <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
             </div>
+            <span id="ecocashAgentDetails" hidden></span>
           </div>
           <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Quote-derived</span>
         </div>
@@ -677,6 +687,8 @@
         <p id="paymentToolsHint" class="sr-only">Payment amount is derived from Amount Required. For split payments, one copy action includes every required transaction.</p>`;
       $('quotePreview').insertAdjacentElement('afterend', panel);
       $('ecocashAgentDetails').textContent = `${CONFIG.ecocashAgent.name} · Agent ${CONFIG.ecocashAgent.code}`;
+      $('ecocashAgentName').textContent = CONFIG.ecocashAgent.name;
+      $('ecocashAgentCode').textContent = CONFIG.ecocashAgent.code;
       const actionBar = panel.nextElementSibling;
       if (actionBar && actionBar.classList.contains('no-print')) {
         actionBar.id = 'quoteActions';

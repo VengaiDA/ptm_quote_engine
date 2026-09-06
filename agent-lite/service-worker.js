@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ptm-agent-lite-v0.1';
+const CACHE_NAME = 'ptm-agent-lite-v0.2';
 const APP_SHELL = [
   './',
   './index.html',
