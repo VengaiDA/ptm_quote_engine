@@ -49,6 +49,10 @@ Updated 6 September 2026.
   title, total label, estimate notice, and approved stay terms. It remains a
   no-login public enquiry/estimate interface; it never presents a browser-made
   value as an official quote and it contains no custom agent credential.
+- GitHub Pages has been published from `main` and browser-verified at
+  `/ptm_quote_engine/agent-lite/`: a synthetic one-night Complete Package
+  enquiry rendered the server-calculated $70 total, the structured terms, and
+  a copy payload labelled as an enquiry rather than an official quote.
 - The root Quote Console is intentionally not switched to this public route:
   its existing adjustments and Payment Control require a future authenticated
   official-quote contract rather than a cosmetic endpoint swap.
