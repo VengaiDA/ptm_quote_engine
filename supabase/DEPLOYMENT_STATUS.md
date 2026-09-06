@@ -12,17 +12,18 @@ Updated 6 September 2026.
 - The JWT-protected `ptm-agent-lite-public` Edge Function is deployed at
   version 2. It accepts only the project anonymous key and exposes only
   non-persistent public rate-plan and quote-preview actions.
+- The authenticated `ptm-agent-lite` replacement is deployed at version 4 with
+  `verify_jwt = false`, under PTM's explicitly approved custom-agent-token
+  boundary. Its duplicate unauthenticated preview routes were removed; every
+  remaining action passes through `authAgent` before it can access property,
+  quote, booking, payment, campaign, or admin data.
 
 ## Intentionally pending
 
-- `activate_commercial_source_of_truth` is **not** applied. It would make old
-  authenticated quote creation fail closed because the legacy function cannot
-  write the new immutable pricing lineage.
-- The plan-aware replacement for the existing authenticated `ptm-agent-lite`
-  function is committed as source but not deployed. Its custom agent-token
-  design requires the function gateway's JWT verification to remain disabled.
-  That is a production security decision requiring explicit PTM approval, or a
-  later migration to Supabase Auth.
+- `activate_commercial_source_of_truth` is **not** applied. The replacement
+  function is deployed, but Gate A remains incomplete until a valid, scoped
+  agent credential is supplied for the required positive-authentication,
+  role-boundary, quote, payment-plan, and booking smoke tests.
 - GitHub Pages is not updated to point Agent Lite at the new public API until
   the commercial activation is safely complete. This prevents a public page
   from reaching a deliberately staged, inactive price plan.
@@ -30,6 +31,8 @@ Updated 6 September 2026.
 ## Verified evidence
 
 - Shared pricing and payment tests: 8/8 pass.
+- Negative authentication smoke tests: missing credentials, invalid agent code,
+  and invalid token each return the same generic HTTP 401 response.
 - The public Edge Function rejects missing authorization at the gateway with
   HTTP 401.
 - With a valid anonymous key, it reaches the handler and currently reports no

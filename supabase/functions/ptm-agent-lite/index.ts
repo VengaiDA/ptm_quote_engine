@@ -624,56 +624,6 @@ Deno.serve(async (req: Request) => {
     const action = body.action
     if (typeof action !== 'string') return j({ error: 'Action is required' }, 400)
 
-    // These two calls deliberately precede agent authentication. They are the
-    // no-login Agent Lite surface: pricing is still computed server-side and
-    // availability is disclosed only as a boolean. Neither action persists a
-    // quote or returns IDs, booking blocks, credentials, or commission data.
-    if (action === 'public_rate_plans') {
-      const property = await getProperty()
-      if (!property) return j({ error: 'PTM property unavailable' }, 503)
-      return j({
-        property: publicProperty(property),
-        rate_plans: await publicRatePlans(property, todayIso()),
-      })
-    }
-    if (action === 'public_quote_preview') {
-      if (!validDate(body.check_in) || !validDate(body.check_out) || body.check_out <= body.check_in) {
-        return j({ error: 'Valid check-in and check-out dates are required' }, 400)
-      }
-      const property = await getProperty()
-      if (!property) return j({ error: 'PTM property unavailable' }, 503)
-      const checkIn = body.check_in as string
-      const checkOut = body.check_out as string
-      const nights = nightsBetween(checkIn, checkOut)
-      if (nights < 1) return j({ error: 'Stay must be at least one night' }, 400)
-      const guest = text(body.guest_name, 'Guest name', 160, true)
-      const productCode = ratePlanCode(body.rate_plan_code)
-      const pricingDate = todayIso()
-      const { resolvedPlan, pricing } = await resolvedQuotePricing(property.id, productCode, nights, pricingDate)
-      const propertyCurrency = text(property.currency, 'Property currency', 12, true).toUpperCase()
-      if (resolvedPlan.currency !== propertyCurrency) throw new Error('Rate-plan currency does not match its property')
-      const available = (await blocks(property.id, checkIn, checkOut)).length === 0
-      return j({
-        quote: {
-          guest_name: guest,
-          check_in: checkIn,
-          check_out: checkOut,
-          nights: pricing.nights,
-          rate_plan: {
-            code: pricing.ratePlan.code,
-            display_name: pricing.ratePlan.name,
-          },
-          nightly_rate: centsToDecimalString(pricing.nightlyRateCents),
-          gross_amount: centsToDecimalString(pricing.accommodationSubtotalCents),
-          discount_percent: pricing.discountBasisPoints / 100,
-          discount_label: pricing.discountLabel,
-          discount_amount: centsToDecimalString(pricing.discountCents),
-          total_amount: centsToDecimalString(pricing.accommodationTotalCents),
-          available,
-        },
-      })
-    }
-
     const agent = await authAgent(body.agent_code, body.token)
     if (!agent) return j({ error: 'Invalid agent code or token' }, 401)
 
