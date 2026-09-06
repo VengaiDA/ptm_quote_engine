@@ -2,19 +2,19 @@
   "name": "PTM Exclusive Quote Engine",
   "short_name": "PTM Quotes",
   "description": "PTM Exclusive accommodation quotation calculator",
-  "start_url": "./",
+  "start_url": "./?build=2026.09.06-p0.1",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f4f0",
   "theme_color": "#091e31",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "./icon-192.png?build=2026.09.06-p0.1",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./icon-512.png",
+      "src": "./icon-512.png?build=2026.09.06-p0.1",
       "sizes": "512x512",
       "type": "image/png"
     }

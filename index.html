@@ -6,10 +6,11 @@
   <meta name="description" content="PTM Exclusive accommodation quotation calculator" />
   <meta name="application-name" content="PTM Quotes" />
   <meta name="theme-color" content="#091e31" />
+  <meta name="ptm-build" content="2026.09.06-p0.1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="PTM Quotes" />
-  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="manifest" href="./manifest.webmanifest?build=2026.09.06-p0.1" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="./icon-192.png" />
   <title>PTM Exclusive | Quote Engine</title>
@@ -127,6 +128,8 @@
   <script>
     /* ==================== PTM COMMERCIAL CONFIGURATION ====================
        Update commercial rules here; calculation logic below reads this object. */
+    const BUILD_ID = '2026.09.06-p0.1';
+
     const CONFIG = {
       operatorName: 'PTM Exclusive',
       propertyName: 'Cozy Up On 5th',
@@ -157,6 +160,7 @@
         checkInTime: '14:00 (2:00 PM)',
         checkOutTime: '10:00 AM',
         cancellationPolicy: 'Free cancellation up to 48 hours before check-in.',
+        acceptedPaymentMethods: 'Cash and EcoCash accepted.',
         bookingConfirmationText: 'A quotation does not secure the selected dates. Your reservation is confirmed once the required payment has been received. Until payment is received, dates remain subject to availability.',
         footerText: 'Thank you for choosing PTM Exclusive.'
       },
@@ -422,7 +426,7 @@
         ['Check-in', CONFIG.directBookingTerms.checkInTime],
         ['Check-out', CONFIG.directBookingTerms.checkOutTime],
         ['Cancellation', CONFIG.directBookingTerms.cancellationPolicy],
-        ['Payment options', CONFIG.paymentOptionsText],
+        ['Payment options', CONFIG.directBookingTerms.acceptedPaymentMethods],
         ['Booking confirmation', CONFIG.directBookingTerms.bookingConfirmationText],
         ['Note', CONFIG.directBookingTerms.footerText]
       ];
@@ -529,7 +533,25 @@
       if (quote.cleaningEnabled && quote.cleaningFee > 0) lines.push(`Cleaning Fee: ${formatCurrency(quote.cleaningFee)}`);
       lines.push('', `*Accommodation Total: ${formatCurrency(quote.accommodationTotal)}*`);
       if (quote.depositEnabled && quote.securityDeposit > 0) lines.push(`Refundable Security Deposit: ${formatCurrency(quote.securityDeposit)}`);
-      lines.push('', '--------------------------------', '', `*AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}*`, '', `Payment Options: ${CONFIG.paymentOptionsText}`, '', '_Payment is required to confirm the reservation._', `_Quotation valid for ${CONFIG.quoteValidityHours} hours._`);
+      lines.push(
+        '',
+        '--------------------------------',
+        '',
+        `*AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}*`,
+        '',
+        `Payment Options: ${CONFIG.paymentOptionsText}`,
+        '',
+        '*TERMS & CONDITIONS*',
+        `Check-in: ${CONFIG.directBookingTerms.checkInTime}`,
+        `Check-out: ${CONFIG.directBookingTerms.checkOutTime}`,
+        `Cancellation: ${CONFIG.directBookingTerms.cancellationPolicy}`,
+        `Payment options: ${CONFIG.directBookingTerms.acceptedPaymentMethods}`,
+        `Booking confirmation: ${CONFIG.directBookingTerms.bookingConfirmationText}`,
+        CONFIG.directBookingTerms.footerText,
+        '',
+        '_Payment is required to confirm the reservation._',
+        `_Quotation valid for ${CONFIG.quoteValidityHours} hours._`
+      );
       return lines.join('\n');
     }
 
@@ -562,7 +584,7 @@
         `Check-in: ${CONFIG.directBookingTerms.checkInTime}`,
         `Check-out: ${CONFIG.directBookingTerms.checkOutTime}`,
         `Cancellation: ${CONFIG.directBookingTerms.cancellationPolicy}`,
-        `Payment Options: ${CONFIG.paymentOptionsText}`,
+        `Payment Options: ${CONFIG.directBookingTerms.acceptedPaymentMethods}`,
         `Booking Confirmation: ${CONFIG.directBookingTerms.bookingConfirmationText}`,
         CONFIG.directBookingTerms.footerText,
         '',
@@ -793,7 +815,51 @@
       return true;
     }
 
+    function initialiseBuildIdentifier() {
+      document.documentElement.dataset.ptmBuild = BUILD_ID;
+      const title = document.querySelector('header p.text-base');
+      const container = title && title.parentElement;
+      if (!container || $('runtimeBuild')) return;
+      const build = document.createElement('p');
+      build.id = 'runtimeBuild';
+      build.className = 'mt-1 text-[9px] font-medium tracking-[0.08em] text-slate-400';
+      build.textContent = `Build ${BUILD_ID}`;
+      container.appendChild(build);
+    }
+
+    function initialiseRootPwaUpdates() {
+      if (!('serviceWorker' in navigator)) return;
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      let updateNotified = false;
+      const notifyAboutUpdate = () => {
+        if (hadController && !updateNotified) {
+          updateNotified = true;
+          showToast('A newer Quote Engine build is ready. Reload before preparing a new quote.');
+        }
+      };
+      const register = async () => {
+        try {
+          const registration = await navigator.serviceWorker.register(`./service-worker.js?build=${encodeURIComponent(BUILD_ID)}`, { updateViaCache: 'none' });
+          await registration.update();
+          if (registration.waiting) notifyAboutUpdate();
+          registration.addEventListener('updatefound', () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed') notifyAboutUpdate();
+            });
+          });
+        } catch (_) {
+          // The Quote Engine remains fully usable when a browser blocks service workers.
+        }
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', notifyAboutUpdate);
+      if (document.readyState === 'complete') register();
+      else window.addEventListener('load', register, { once: true });
+    }
+
     function initialise() {
+      initialiseBuildIdentifier();
       document.querySelectorAll('.currency-symbol').forEach((element) => { element.textContent = CONFIG.currencySymbol; });
       initialiseProductTypeControl();
       initialisePaymentControl();
@@ -840,6 +906,7 @@
       $('newQuoteButton').addEventListener('click', confirmAndResetQuote);
       resetQuote();
       if (window.lucide) window.lucide.createIcons();
+      initialiseRootPwaUpdates();
     }
 
     initialise();
