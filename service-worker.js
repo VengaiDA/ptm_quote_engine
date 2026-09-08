@@ -5,14 +5,36 @@
  * app cannot keep executing an old index.html after a release.
  */
 const CACHE_NAME = 'ptm-quote-engine-2026-09-08-p0-2';
+const TERMS_PATCH_SCRIPT = './root-terms-patch.js?build=2026.09.08-p0.2';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './root-terms-patch.js',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png'
 ];
+
+async function injectTermsPatch(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok || !contentType.includes('text/html')) return response;
+
+  let html = await response.text();
+  if (!html.includes('root-terms-patch.js')) {
+    html = html.replace('</body>', `  <script src="${TERMS_PATCH_SCRIPT}"></script>\n</body>`);
+  }
+
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.set('cache-control', 'no-store');
+
+  return new Response(html, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -42,6 +64,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request, { cache: 'no-store' })
+        .then(injectTermsPatch)
         .then((response) => {
           if (response && response.ok) {
             const copy = response.clone();
