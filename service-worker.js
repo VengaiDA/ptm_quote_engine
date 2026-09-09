@@ -4,8 +4,9 @@
  * The versioned cache is only an offline fallback, so an installed Home Screen
  * app cannot keep executing an old index.html after a release.
  */
-const CACHE_NAME = 'ptm-quote-engine-2026-09-09-p0-5';
-const PRESENTATION_SCRIPT = './quote-presentation-approved.js?build=2026.09.09-p0.5';
+const BUILD_ID = '2026.09.09-p0.6';
+const CACHE_NAME = `ptm-quote-engine-${BUILD_ID}`;
+const PRESENTATION_SCRIPT = `./quote-presentation-approved.js?build=${BUILD_ID}`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -48,15 +49,32 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith('ptm-quote-engine-') && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith('ptm-quote-engine-') && key !== CACHE_NAME)
+        .map((key) => caches.delete(key))
+    );
+
+    await self.clients.claim();
+
+    /* Force already-open root Quote Engine windows onto this release once.
+     * This closes the iOS/Home Screen gap where the new service worker has
+     * activated but the old document is still running in memory. */
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    await Promise.all(clients.map(async (client) => {
+      try {
+        const url = new URL(client.url);
+        if (url.origin !== self.location.origin || url.pathname.includes('/agent-lite/')) return;
+        if (url.searchParams.get('ptm-build') === BUILD_ID) return;
+        url.searchParams.set('ptm-build', BUILD_ID);
+        await client.navigate(url.href);
+      } catch (_) {
+        // A client that cannot be navigated can still refresh normally later.
+      }
+    }));
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
