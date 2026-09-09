@@ -4,15 +4,40 @@
  * The versioned cache is only an offline fallback, so an installed Home Screen
  * app cannot keep executing an old index.html after a release.
  */
-const CACHE_NAME = 'ptm-quote-engine-2026-09-09-p0-4';
+const CACHE_NAME = 'ptm-quote-engine-2026-09-09-p0-5';
+const PRESENTATION_SCRIPT = './quote-presentation-approved.js?build=2026.09.09-p0.5';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './quote-presentation-approved.js',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png'
 ];
+
+async function injectApprovedPresentation(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok || !contentType.includes('text/html')) return response;
+
+  let html = await response.text();
+  if (!html.includes('quote-presentation-approved.js')) {
+    html = html.replace(
+      '</body>',
+      `  <script src="${PRESENTATION_SCRIPT}"></script>\n</body>`
+    );
+  }
+
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.set('cache-control', 'no-store');
+
+  return new Response(html, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -42,6 +67,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request, { cache: 'no-store' })
+        .then(injectApprovedPresentation)
         .then((response) => {
           if (response && response.ok) {
             const copy = response.clone();
