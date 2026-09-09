@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="PTM Quotes" />
-  <link rel="manifest" href="./manifest.webmanifest?build=2026.09.06-p0.1" />
+  <link rel="manifest" href="./manifest.webmanifest?build=2026.09.09-p0.4" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="./icon-192.png" />
   <title>PTM Exclusive | Quote Engine</title>
@@ -42,6 +42,7 @@
     .toggle-panel[hidden], .conditional-field[hidden] { display: none; }
     .money-prefix { pointer-events: none; }
     .document-rule { height: 1px; background: linear-gradient(90deg, #d9e3ea, transparent); }
+    #previewValidity { display: none; }
     .quote-terms { margin-top: 1.25rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
     .quote-terms-list { display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); gap: .55rem .9rem; margin-top: .7rem; }
     .quote-terms-list dt { color: #64748b; font-size: .7rem; font-weight: 700; }
@@ -128,7 +129,7 @@
   <script>
     /* ==================== PTM COMMERCIAL CONFIGURATION ====================
        Update commercial rules here; calculation logic below reads this object. */
-    const BUILD_ID = '2026.09.06-p0.1';
+    const BUILD_ID = '2026.09.09-p0.4';
 
     const CONFIG = {
       operatorName: 'PTM Exclusive',
@@ -154,7 +155,6 @@
       },
       defaultCleaningFee: 0,
       defaultSecurityDeposit: 0,
-      paymentOptionsText: 'Cash and EcoCash payments are available.',
       quoteValidityHours: 24,
       directBookingTerms: {
         checkInTime: '14:00 (2:00 PM)',
@@ -404,7 +404,20 @@
       if (preparedBy) preparedBy.textContent = CONFIG.operatorName;
     }
 
+    function getOrderedDirectBookingTerms() {
+      return [
+        ['Check-in', CONFIG.directBookingTerms.checkInTime],
+        ['Check-out', CONFIG.directBookingTerms.checkOutTime],
+        ['Booking confirmation', CONFIG.directBookingTerms.bookingConfirmationText],
+        ['Cancellation', CONFIG.directBookingTerms.cancellationPolicy],
+        ['Quotation validity', `${CONFIG.quoteValidityHours} hours.`],
+        ['Payment options', CONFIG.directBookingTerms.acceptedPaymentMethods]
+      ];
+    }
+
     function renderDirectBookingTerms() {
+      $('previewValidity').hidden = true;
+      $('previewValidity').textContent = '';
       let termsSection = $('previewTerms');
       if (!termsSection) {
         termsSection = document.createElement('section');
@@ -416,27 +429,23 @@
         const list = document.createElement('dl');
         list.id = 'previewTermsList';
         list.className = 'quote-terms-list';
-        termsSection.append(title, list);
+        const footer = document.createElement('p');
+        footer.id = 'previewTermsFooter';
+        footer.className = 'mt-3 text-xs font-medium text-slate-500';
+        termsSection.append(title, list, footer);
         $('previewValidity').insertAdjacentElement('afterend', termsSection);
       }
 
       const list = $('previewTermsList');
       list.replaceChildren();
-      const items = [
-        ['Check-in', CONFIG.directBookingTerms.checkInTime],
-        ['Check-out', CONFIG.directBookingTerms.checkOutTime],
-        ['Cancellation', CONFIG.directBookingTerms.cancellationPolicy],
-        ['Payment options', CONFIG.directBookingTerms.acceptedPaymentMethods],
-        ['Booking confirmation', CONFIG.directBookingTerms.bookingConfirmationText],
-        ['Note', CONFIG.directBookingTerms.footerText]
-      ];
-      items.forEach(([label, value]) => {
+      getOrderedDirectBookingTerms().forEach(([label, value]) => {
         const term = document.createElement('dt');
         const description = document.createElement('dd');
         term.textContent = label;
         description.textContent = value;
         list.append(term, description);
       });
+      $('previewTermsFooter').textContent = CONFIG.directBookingTerms.footerText;
     }
 
     function renderProductType(quote) {
@@ -489,7 +498,6 @@
       document.querySelector('#quotePreview .bg-navy-900 p:last-child').textContent = quote.depositEnabled && quote.securityDeposit > 0
         ? 'Includes accommodation charges and refundable security deposit.'
         : 'Includes applicable accommodation charges.';
-      $('previewValidity').textContent = `Quotation valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`;
       updatePaymentControl(quote, validation);
 
       const validActions = validation.isValid;
@@ -539,18 +547,10 @@
         '',
         `*AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}*`,
         '',
-        `Payment Options: ${CONFIG.paymentOptionsText}`,
-        '',
         '*TERMS & CONDITIONS*',
-        `Check-in: ${CONFIG.directBookingTerms.checkInTime}`,
-        `Check-out: ${CONFIG.directBookingTerms.checkOutTime}`,
-        `Cancellation: ${CONFIG.directBookingTerms.cancellationPolicy}`,
-        `Payment options: ${CONFIG.directBookingTerms.acceptedPaymentMethods}`,
-        `Booking confirmation: ${CONFIG.directBookingTerms.bookingConfirmationText}`,
-        CONFIG.directBookingTerms.footerText,
+        ...getOrderedDirectBookingTerms().map(([label, value]) => `${label}: ${value}`),
         '',
-        '_Payment is required to confirm the reservation._',
-        `_Quotation valid for ${CONFIG.quoteValidityHours} hours._`
+        CONFIG.directBookingTerms.footerText
       );
       return lines.join('\n');
     }
@@ -581,14 +581,9 @@
         `AMOUNT REQUIRED: ${formatCurrency(quote.amountRequired)}`,
         '',
         'TERMS & CONDITIONS',
-        `Check-in: ${CONFIG.directBookingTerms.checkInTime}`,
-        `Check-out: ${CONFIG.directBookingTerms.checkOutTime}`,
-        `Cancellation: ${CONFIG.directBookingTerms.cancellationPolicy}`,
-        `Payment Options: ${CONFIG.directBookingTerms.acceptedPaymentMethods}`,
-        `Booking Confirmation: ${CONFIG.directBookingTerms.bookingConfirmationText}`,
-        CONFIG.directBookingTerms.footerText,
+        ...getOrderedDirectBookingTerms().map(([label, value]) => `${label}: ${value}`),
         '',
-        `This quotation is valid for ${CONFIG.quoteValidityHours} hours. Payment is required to confirm the reservation.`
+        CONFIG.directBookingTerms.footerText
       );
       return lines.join('\n');
     }

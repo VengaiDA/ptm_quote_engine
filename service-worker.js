@@ -4,7 +4,7 @@
  * The versioned cache is only an offline fallback, so an installed Home Screen
  * app cannot keep executing an old index.html after a release.
  */
-const CACHE_NAME = 'ptm-quote-engine-2026-09-06-p0-1';
+const CACHE_NAME = 'ptm-quote-engine-2026-09-09-p0-4';
 const APP_SHELL = [
   './',
   './index.html',
